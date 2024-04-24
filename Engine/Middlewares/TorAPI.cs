@@ -34,9 +34,20 @@ namespace MatriX.API.Engine.Middlewares
         static int currentport = 40000;
         static int NextPort()
         {
-            currentport = currentport + 5;
+            currentport = currentport + 4;
             if (currentport > 60000)
                 currentport = 40000;
+
+            string ss = Bash.Run("ss -ln");
+            if (ss != null && ss.Contains(currentport.ToString()))
+            {
+                for (int i = currentport; i < 60000; i++)
+                {
+                    currentport = i;
+                    if (!ss.Contains(currentport.ToString()))
+                        break;
+                }
+            }
 
             return currentport;
         }
@@ -74,7 +85,7 @@ namespace MatriX.API.Engine.Middlewares
                     return;
                 }
 
-                string inDir = AppInit.settings.appfolder;
+                string inDir = AppInit.appfolder;
                 string version = string.IsNullOrEmpty(userData.versionts) ? "latest" : userData.versionts;
 
                 if (version != "latest" && !File.Exists($"{inDir}/TorrServer/{version}"))
@@ -278,7 +289,7 @@ namespace MatriX.API.Engine.Middlewares
 
             if (!db.TryGetValue(login, out TorInfo info))
             {
-                string inDir = AppInit.settings.appfolder;
+                string inDir = AppInit.appfolder;
                 string version = "latest";
 
                 #region TorInfo
@@ -413,10 +424,10 @@ namespace MatriX.API.Engine.Middlewares
                         {
                             client.Timeout = TimeSpan.FromSeconds(1);
 
-                            var response = await client.GetAsync($"http://127.0.0.1:{port}/echo").ConfigureAwait(false);
+                            var response = await client.GetAsync($"http://127.0.0.1:{port}/echo");
                             if (response.StatusCode == System.Net.HttpStatusCode.OK)
                             {
-                                string echo = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                                string echo = await response.Content.ReadAsStringAsync();
                                 if (echo.StartsWith("MatriX."))
                                 {
                                     servIsWork = true;

@@ -79,7 +79,9 @@ namespace MatriX.API.Controllers
 </html>
 ";
 
-			string html_ts = string.Empty;
+            #region Версия TorrServer
+            string html_ts = string.Empty;
+
 			foreach (string infile in Directory.GetFiles("TorrServer").OrderByDescending(i => i.EndsWith("latest"))) 
 			{
 				if (infile.Contains("."))
@@ -90,17 +92,25 @@ namespace MatriX.API.Controllers
 
                 html_ts += $"<div class=\"flex\"><input type=\"radio\" name=\"ts\" value=\"{name}\" {_checked} /> {name}</div>";
             }
+            #endregion
 
-            string html_servers = string.Empty;
-			if (AppInit.settings.servers != null)
+            #region Сервер
+            string html_servers = $"<div class=\"flex\"><input type=\"radio\" name=\"server\" value=\"auto\" {(string.IsNullOrEmpty(userData.server) ? "checked" : "")} /> auto</div>";
+
+            if (AppInit.settings.servers != null)
 			{
 				foreach (var server in AppInit.settings.servers)
                 {
-                    string _checked = ((string.IsNullOrEmpty(userData.server) && server.name == "current") || server.host == userData.server) ? "checked" : "";
+					if (!server.enable)
+						continue;
 
-                    html_servers += $"<div class=\"flex\"><input type=\"radio\" name=\"server\" value=\"{server.host}\" {_checked} /> {server.name}</div>";
+                    string _checked = server.host == userData.server ? "checked" : "";
+					string _status = server.status == 1 ? "<b style=\"color: green;\">work</b>" : "<b style=\"color: crimson;\">shutdown</b>";
+
+                    html_servers += $"<div class=\"flex\"><input type=\"radio\" name=\"server\" value=\"{server.host}\" {_checked} /> {server.name}&nbsp; - &nbsp;{_status}</div>";
 				}
 			}
+            #endregion
 
             html = html.Replace("{torrserver}", html_ts)
                        .Replace("{server}", html_servers)
@@ -133,12 +143,12 @@ namespace MatriX.API.Controllers
             if (!string.IsNullOrEmpty(server))
             {
                 update = true;
-                userData.server = server;
+                userData.server = server == "auto" ? null : server;
             }
 
             if (update)
 			{
-				System.IO.File.WriteAllText($"{AppInit.settings.appfolder}/usersDb.json", JsonConvert.SerializeObject(AppInit.usersDb, Formatting.Indented));
+				System.IO.File.WriteAllText($"{AppInit.appfolder}/usersDb.json", JsonConvert.SerializeObject(AppInit.usersDb, Formatting.Indented));
 
 				if (reload && TorAPI.db.TryGetValue(userData.login, out TorInfo info))
 				{
@@ -146,7 +156,7 @@ namespace MatriX.API.Controllers
                     TorAPI.db.TryRemove(userData.login, out _);
                 }
 
-				if (reload && !string.IsNullOrEmpty(userData.server) && !RemoteAPI.serv(userData).Contains("127.0.0.1"))
+				if (reload && !string.IsNullOrEmpty(userData.server) && !RemoteAPI.serv(userData, null).Contains("127.0.0.1"))
 				{
                     using (var client = new HttpClient())
                     {
@@ -156,7 +166,24 @@ namespace MatriX.API.Controllers
                 }
             }
 
-            return Content("Настройки сохранены", contentType: "text/html; charset=utf-8");
+            string html = @"
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Настройки</title>
+</head>
+<body>
+
+Настройки сохранены</b><br><br><br>
+
+<form method=""get"" action=""/control"" id=""form"">
+	<button type=""submit"">Вернутся назад</button>
+</form>
+</body>
+</html>
+";
+
+            return Content(html, contentType: "text/html; charset=utf-8");
         }
     }
 }

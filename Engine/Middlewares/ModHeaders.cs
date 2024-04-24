@@ -25,7 +25,7 @@ namespace MatriX.API.Engine.Middlewares
             else
                 httpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
 
-            httpContext.Response.Headers.Append("MatriX.API", "https://github.com/immisterio/MatriX.API");
+            httpContext.Response.Headers.Append("MatriX-API", "https://github.com/immisterio/MatriX.API");
 
             return _next(httpContext);
         }

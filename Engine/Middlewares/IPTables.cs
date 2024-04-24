@@ -65,12 +65,6 @@ namespace MatriX.API.Engine.Middlewares
 
         public Task InvokeAsync(HttpContext httpContext)
         {
-            if (httpContext.Request.Path.Value.StartsWith("/favicon.ico"))
-            {
-                httpContext.Response.BodyWriter.WriteAsync(File.ReadAllBytes("favicon.ico")).ConfigureAwait(false);
-                return Task.CompletedTask;
-            }
-
             var userData = httpContext.Features.Get<UserData>();
             if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control"))
                 return _next(httpContext);

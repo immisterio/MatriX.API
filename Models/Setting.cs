@@ -8,13 +8,17 @@ namespace MatriX.API.Models
 
         public bool IPAddressAny { get; set; } = true;
 
-        public string appfolder { get; set; }
+        public bool onlyRemoteApi { get; set; }
 
         public List<Server> servers { get; set; }
+
+        public string interface_network { get; set; } = "eth0";
 
         public int worknodetominutes { get; set; } = 5;
 
         public int maxiptoIsLockHostOrUser { get; set; } = 8;
+
+        public string domainid_pattern { get; set; } = "^([^\\.]{8})\\.";
 
         public bool AuthorizationRequired { get; set; } = true;
 

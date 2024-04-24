@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
-using Newtonsoft.Json;
 using System.Net;
 using System.Text.RegularExpressions;
 using MatriX.API.Models;
@@ -8,6 +7,8 @@ using System.Threading;
 using MatriX.API.Engine.Middlewares;
 using System;
 using System.Threading.Tasks;
+using System.Net.Http;
+using MatriX.API.Engine;
 
 namespace MatriX.API
 {
@@ -15,8 +16,6 @@ namespace MatriX.API
     {
         public static void Main(string[] args)
         {
-            string appfolder = System.IO.Directory.GetCurrentDirectory();
-
             foreach (var line in args)
             {
                 var g = new Regex("-([^=]+)=([^\n\r]+)").Match(line).Groups;
@@ -28,23 +27,16 @@ namespace MatriX.API
                     case "d":
                         {
                             // -d=/opt/matrix
-                            appfolder = value;
+                            AppInit.appfolder = value;
                             break;
                         }
                 }
             }
 
-            #region settings.json
-            if (System.IO.File.Exists($"{appfolder}/settings.json"))
-                AppInit.settings = JsonConvert.DeserializeObject<Setting>(System.IO.File.ReadAllText($"{appfolder}/settings.json"));
-
-            AppInit.settings.appfolder = appfolder;
-            #endregion
-
             #region load whiteip.txt
-            if (System.IO.File.Exists($"{appfolder}/whiteip.txt"))
+            if (System.IO.File.Exists($"{AppInit.appfolder}/whiteip.txt"))
             {
-                foreach (string ip in System.IO.File.ReadAllLines($"{appfolder}/whiteip.txt"))
+                foreach (string ip in System.IO.File.ReadAllLines($"{AppInit.appfolder}/whiteip.txt"))
                 {
                     if (string.IsNullOrWhiteSpace(ip) || !ip.Contains("."))
                         continue;
@@ -100,6 +92,134 @@ namespace MatriX.API
                                 }
                             }
                         }
+                    }
+                    catch { }
+                }
+            });
+            #endregion
+
+            #region check servers
+            ThreadPool.QueueUserWorkItem(async _ =>
+            {
+                bool firstwhile = true;
+
+                while (true)
+                {
+                    await Task.Delay(firstwhile ? TimeSpan.FromSeconds(5) : TimeSpan.FromMinutes(1));
+                    firstwhile = false;
+
+                    try
+                    {
+                        if (AppInit.settings.servers == null)
+                            continue;
+
+                        foreach (var server in AppInit.settings.servers)
+                        {
+                            if (!server.enable || string.IsNullOrEmpty(server.host))
+                                continue;
+
+                            if (server.host.Contains("127.0.0.1"))
+                            {
+                                server.status = 1;
+                                continue;
+                            }
+
+                            using (HttpClient client = new HttpClient())
+                            {
+                                client.Timeout = TimeSpan.FromSeconds(10);
+
+                                var response = await client.GetAsync($"{server.host}/echo");
+                                if (response.StatusCode == HttpStatusCode.OK)
+                                {
+                                    string echo = await response.Content.ReadAsStringAsync();
+                                    server.status = echo.StartsWith("MatriX.") ? 1 : 2;
+
+                                    if (server.status == 1 && server.limit != null)
+                                    {
+                                        try
+                                        {
+                                            response = await client.GetAsync($"{server.host}/top");
+                                            string top = await response.Content.ReadAsStringAsync();
+
+                                            if (top == null || !top.Contains("mem:"))
+                                                continue;
+
+                                            int.TryParse(Regex.Match(top, "mem: ([0-9]+)").Groups[1].Value, out int mem);
+                                            int.TryParse(Regex.Match(top, "cpu: ([0-9]+)").Groups[1].Value, out int cpu);
+
+                                            int.TryParse(Regex.Match(top, "Received: ([0-9]+)").Groups[1].Value, out int received);
+                                            if (0 > received)
+                                                received = 0;
+
+                                            int.TryParse(Regex.Match(top, "Transmitted: ([0-9]+)").Groups[1].Value, out int transmitted);
+                                            if (0 > transmitted)
+                                                transmitted = 0;
+
+                                            if (server.limit.ram != 0 && mem > server.limit.ram)
+                                            {
+                                                server.status = 3;
+                                                continue;
+                                            }
+
+                                            if (server.limit.cpu != 0 && cpu > server.limit.cpu)
+                                            {
+                                                server.status = 3;
+                                                continue;
+                                            }
+
+                                            if (server.limit.network != null)
+                                            {
+                                                if (server.limit.network.all != 0)
+                                                {
+                                                    if ((received + transmitted) > server.limit.network.all)
+                                                    {
+                                                        server.status = 3;
+                                                        continue;
+                                                    }
+                                                }
+
+                                                if (server.limit.network.transmitted != 0 && transmitted > server.limit.network.transmitted)
+                                                {
+                                                    server.status = 3;
+                                                    continue;
+                                                }
+
+                                                if (server.limit.network.received != 0 && received > server.limit.network.received)
+                                                {
+                                                    server.status = 3;
+                                                    continue;
+                                                }
+                                            }
+                                        }
+                                        catch { }
+                                    }
+                                }
+                                else
+                                {
+                                    server.status = 2;
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            });
+            #endregion
+
+            #region check top
+            ThreadPool.QueueUserWorkItem(async _ =>
+            {
+                while (true)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5));
+
+                    try
+                    {
+                        string top = "mem: " + Bash.Run("free -t | awk '/Mem/{printf(\\\"%.0f\\n\\\", ($3-$6)/$2 * 100)}'"); // процент 1-100
+                        top += "cpu: " + Bash.Run("uptime | grep -o 'load average: .*' | awk -F ', ' '{print $2}'");
+                        top += Bash.Run("sar -n DEV 1 60 | grep Average | grep "+AppInit.settings.interface_network+ " | awk '{print \\\"Received: \\\" $5*8/1024 \\\" Mbit/s, Transmitted: \\\" $6*8/1024 \\\" Mbit/s\\\"}'");
+
+                        AppInit.top = top;
                     }
                     catch { }
                 }

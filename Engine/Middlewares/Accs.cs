@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Caching.Memory;
+using System.IO;
+using System.Collections.Generic;
 
 namespace MatriX.API.Engine.Middlewares
 {
@@ -23,12 +25,42 @@ namespace MatriX.API.Engine.Middlewares
         }
         #endregion
 
+        #region IsOkIp
+        bool IsOkIp(string ip)
+        {
+            string memKeyLocIP = $"Accs:IsOkIp:{ip}:{DateTime.Now.Hour}";
+
+            if (memory.TryGetValue(memKeyLocIP, out HashSet<string> ips))
+            {
+                ips.Add(ip);
+                memory.Set(memKeyLocIP, ips, DateTime.Now.AddHours(1));
+
+                if (ips.Count > 10)
+                    return false;
+            }
+            else
+            {
+                ips = new HashSet<string>() { ip };
+                memory.Set(memKeyLocIP, ips, DateTime.Now.AddHours(1));
+            }
+
+            return true;
+        }
+        #endregion
+
+
         public Task Invoke(HttpContext httpContext)
         {
             #region Служебный запрос
+            if (httpContext.Request.Path.Value.StartsWith("/favicon.ico"))
+            {
+                httpContext.Response.BodyWriter.WriteAsync(File.ReadAllBytes("favicon.ico")).ConfigureAwait(false);
+                return Task.CompletedTask;
+            }
+
             string clientIp = httpContext.Connection.RemoteIpAddress.ToString();
 
-            if (clientIp == "127.0.0.1" || httpContext.Request.Path.Value.StartsWith("/xrealip") || httpContext.Request.Path.Value.StartsWith("/headers"))
+            if (clientIp == "127.0.0.1" || httpContext.Request.Path.Value.StartsWith("/top") || httpContext.Request.Path.Value.StartsWith("/xrealip") || httpContext.Request.Path.Value.StartsWith("/headers"))
             {
                 httpContext.Features.Set(new UserData()
                 {
@@ -40,14 +72,19 @@ namespace MatriX.API.Engine.Middlewares
             #endregion
 
             #region Авторизация по домену
-            string domainid = Regex.Match(httpContext.Request.Host.Value, "^([^\\.]+)\\.").Groups[1].Value;
-
-            if (!string.IsNullOrWhiteSpace(domainid))
+            if (!string.IsNullOrEmpty(AppInit.settings.domainid_pattern))
             {
-                if (AppInit.usersDb.FirstOrDefault(i => i.domainid == domainid) is UserData _domainUser)
+                string domainid = Regex.Match(httpContext.Request.Host.Value, AppInit.settings.domainid_pattern).Groups[1].Value;
+
+                if (!string.IsNullOrWhiteSpace(domainid))
                 {
-                    httpContext.Features.Set(_domainUser);
-                    return _next(httpContext);
+                    if (IsOkIp(clientIp) && AppInit.usersDb.FirstOrDefault(i => i.domainid == domainid) is UserData _domainUser)
+                    {
+                        httpContext.Features.Set(_domainUser);
+                        return _next(httpContext);
+                    }
+
+                    return httpContext.Response.WriteAsync("user not found");
                 }
             }
             #endregion
@@ -102,7 +139,7 @@ namespace MatriX.API.Engine.Middlewares
                         }
                         else if (AppInit.settings.AuthorizationRequired)
                         {
-                            if (AppInit.usersDb.FirstOrDefault(i => i.login == login) is UserData _u && _u.passwd == passwd)
+                            if (IsOkIp(clientIp) && AppInit.usersDb.FirstOrDefault(i => i.login == login) is UserData _u && _u.passwd == passwd)
                             {
                                 _u._ip = clientIp;
                                 httpContext.Features.Set(_u);

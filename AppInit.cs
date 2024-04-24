@@ -9,17 +9,43 @@ namespace MatriX.API
 {
     public class AppInit
     {
-        public static Setting settings = new Setting();
+        public static string appfolder = Directory.GetCurrentDirectory();
+
+        public static string top = string.Empty;
 
         public static ConcurrentBag<IPNetwork> whiteip = new ConcurrentBag<IPNetwork>();
 
+        #region settings.json
+        static (Setting, DateTime) cachesettings = default;
+        public static Setting settings
+        {
+            get
+            {
+                string path = $"{appfolder}/settings.json";
 
+                if (!File.Exists(path))
+                    return new Setting();
+
+                var lastWriteTime = File.GetLastWriteTime(path);
+
+                if (cachesettings.Item2 != lastWriteTime)
+                {
+                    cachesettings.Item2 = lastWriteTime;
+                    cachesettings.Item1 = JsonConvert.DeserializeObject<Setting>(File.ReadAllText(path));
+                }
+
+                return cachesettings.Item1;
+            }
+        }
+        #endregion
+
+        #region usersDb.json
         static (ConcurrentBag<UserData>, DateTime) cacheusersDb = default;
         public static ConcurrentBag<UserData> usersDb
         {
             get
             {
-                string path = $"{settings.appfolder}/usersDb.json";
+                string path = $"{appfolder}/usersDb.json";
 
                 if (!File.Exists(path))
                     return new ConcurrentBag<UserData>();
@@ -35,5 +61,6 @@ namespace MatriX.API
                 return cacheusersDb.Item1;
             }
         }
+        #endregion
     }
 }

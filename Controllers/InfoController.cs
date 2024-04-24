@@ -47,17 +47,13 @@ namespace MatriX.API.Controllers
         }
 
 
-        [Route("xrealip")]
-        public string XRealIP()
-        {
-            return HttpContext.Connection.RemoteIpAddress.ToString();
-        }
+        [Route("top")]
+        public string Top() => AppInit.top;
 
+        [Route("xrealip")]
+        public string XRealIP() => HttpContext.Connection.RemoteIpAddress.ToString();
 
         [Route("headers")]
-        public ActionResult Headers()
-        {
-            return Json(HttpContext.Request.Headers);
-        }
+        public ActionResult Headers() => Json(HttpContext.Request.Headers);
     }
 }

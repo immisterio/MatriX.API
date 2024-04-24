@@ -22,18 +22,42 @@ namespace MatriX.API.Engine.Middlewares
 
         IHttpClientFactory httpClientFactory;
 
-        public static string serv(UserData userData)
+        public static string serv(UserData userData, IMemoryCache mem)
         {
-            if (AppInit.settings.servers == null || AppInit.settings.servers.Count == 0)
-                return "http://127.0.0.1";
+            Server[] working_servers = AppInit.settings.servers?.Where(i => i.enable && i.status == 1 && (i.workinghours == null || i.workinghours.Contains(DateTime.UtcNow.Hour)))?.ToArray();
 
-            string server = AppInit.settings.servers[0].host;
+            if (working_servers == null || working_servers.Length == 0)
+            {
+                // рабочие сервера у которых workinghours не совпадает с текущим Hour
+                // Hour 16-18 / workinghours 19-24
+                working_servers = AppInit.settings.servers?.Where(i => i.enable && i.status == 1 && i.workinghours != null && !i.workinghours.Contains(DateTime.UtcNow.Hour))?.ToArray();
+                if (working_servers == null || working_servers.Length == 0)
+                {
+                    // резерв на случай перегрузки основных серверов
+                    working_servers = AppInit.settings.servers?.Where(i => i.enable && i.status == 1 && i.reserve)?.ToArray();
+                    if (working_servers == null || working_servers.Length == 0)
+                        return "http://127.0.0.1";
+                }    
+            }
 
             if (!string.IsNullOrEmpty(userData.server))
-                server = userData.server;
+            {
+                if (working_servers.FirstOrDefault(i => i.host == userData.server) != null)
+                    return userData.server;
+            }
 
-            if (AppInit.settings.servers.FirstOrDefault(i => i.host == server) == null)
-                server = AppInit.settings.servers[0].host;
+            string server = working_servers[Random.Shared.Next(0, working_servers.Length)].host;
+            if (mem == null)
+                return server;
+
+            string mkey = $"RemoteAPI:serv:{userData.login}";
+            if (mem.TryGetValue(mkey, out string _serv) && AppInit.settings.servers.FirstOrDefault(i => i.enable && i.status != 2 && i.host == _serv) != null)
+            {
+                mem.Set(mkey, _serv, DateTime.Now.AddHours(4));
+                return _serv;
+            }
+
+            mem.Set(mkey, server, DateTime.Now.AddHours(4));
 
             return server;
         }
@@ -50,16 +74,28 @@ namespace MatriX.API.Engine.Middlewares
         {
             #region search / torinfo / control
             var userData = httpContext.Features.Get<UserData>();
-            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/search") || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control"))
+            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control"))
+            {
+                await _next(httpContext);
+                return;
+            }
+
+            if (httpContext.Request.Path.Value.StartsWith("/search") && !AppInit.settings.onlyRemoteApi)
             {
                 await _next(httpContext);
                 return;
             }
             #endregion
 
-            string serip = serv(userData);
+            string serip = serv(userData, memory);
             if (serip.Contains("127.0.0.1"))
             {
+                if (AppInit.settings.onlyRemoteApi)
+                {
+                    await httpContext.Response.WriteAsync("no working servers", httpContext.RequestAborted).ConfigureAwait(false);
+                    return;
+                }
+
                 await _next(httpContext);
                 return;
             }
