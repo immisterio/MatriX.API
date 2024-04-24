@@ -7,12 +7,12 @@ curl -s https://raw.githubusercontent.com/immisterio/MatriX.API/master/install.s
 ```
 [
   {
-	"domainid": "ogurchik", // доступ без авторизации через ogurchik.matrix.io
+    "domainid": "ogurchik", // доступ без авторизации через ogurchik.matrix.io
     "expires": "0001-01-01T00:00:00" // доступ без ограничения по времени
   },
   {
-    "login": "ts2",   // доступ с авторизацией через matrix.io
-	"passwd": "test",
+    "login": "ts2", // доступ с авторизацией через matrix.io
+    "passwd": "test",
     "expires": "2025-09-01T16:43:00" // доступ до 01.09.2025 16:43
   }
 ]
@@ -80,7 +80,7 @@ matrix.io - (ip 33.33.33.33)
         "ram": 90,
         "cpu": 40,
         "network": {
-          "transmitted": 2000 // 2gb
+          "transmitted": 2000 // 2gb на отдачу, канал duplex
         }
       },
       {
@@ -92,13 +92,13 @@ matrix.io - (ip 33.33.33.33)
           "ram": 90,
           "cpu": 40,
           "network": {
-            "all": 800 // MBit/s
+            "all": 800 // 800 MBit/s (in/out), обычный канал
           }
         }
       },
       {
         "enable": true,
-        "reserve": true,
+        "reserve": true, // если Germany и Amsterdam недоступны
         "host": "http://45.32.232.3:8090"
       }
     ]
