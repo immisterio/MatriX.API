@@ -148,8 +148,11 @@ namespace MatriX.API.Engine.Middlewares
                         File.WriteAllText($"{inDir}/sandbox/{info.user.id}/accs.db", $"{{\"ts\":\"{passwd}\"}}");
 
                         string arguments = $"--httpauth -p {info.port} -d {inDir}/sandbox/{info.user.id}";
+
                         if (userData.maxSize > 0)
                             arguments += $" -m {userData.maxSize}";
+                        else if (AppInit.settings.maxSize > 0 && userData.maxSize != -1)
+                            arguments += $" -m {AppInit.settings.maxSize}";
 
                         var processInfo = new ProcessStartInfo();
                         processInfo.UseShellExecute = false;

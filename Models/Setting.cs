@@ -18,6 +18,8 @@ namespace MatriX.API.Models
 
         public int maxiptoIsLockHostOrUser { get; set; } = 8;
 
+        public long maxSize { get; set; }
+
         public string domainid_pattern { get; set; } = "^([^\\.]{8})\\.";
 
         public bool AuthorizationRequired { get; set; } = true;
