@@ -121,7 +121,7 @@ namespace MatriX.API.Engine.Middlewares
                 {
                     string default_settings = File.ReadAllText($"{inDir}/TorrServer/default_settings.json");
 
-                    if (AppInit.settings.allowedToChangeSettings)
+                    if (userData.allowedToChangeSettings)
                     {
                         string user_settings = File.ReadAllText($"{inDir}/sandbox/{userData.id}/settings.json");
 
@@ -132,9 +132,11 @@ namespace MatriX.API.Engine.Middlewares
                         default_settings = Regex.Replace(default_settings, "(\"PreloadCache\"):([^,]+)", $"$1:{PreloadCache}", RegexOptions.IgnoreCase);
 
                         default_settings = Regex.Replace(default_settings, "(\"PeersListenPort\"):([^,]+)", $"$1:{info.port + 2}", RegexOptions.IgnoreCase);
-                    }
 
-                    File.WriteAllText($"{inDir}/sandbox/{userData.id}/settings.json", default_settings);
+                        File.WriteAllText($"{inDir}/sandbox/{userData.id}/settings.json", default_settings);
+                    }
+                    else if (!File.Exists($"{inDir}/sandbox/{userData.id}/settings.json"))
+                        File.WriteAllText($"{inDir}/sandbox/{userData.id}/settings.json", default_settings);
                 }
                 #endregion
 
@@ -145,12 +147,16 @@ namespace MatriX.API.Engine.Middlewares
                     {
                         File.WriteAllText($"{inDir}/sandbox/{info.user.id}/accs.db", $"{{\"ts\":\"{passwd}\"}}");
 
+                        string arguments = $"--httpauth -p {info.port} -d {inDir}/sandbox/{info.user.id}";
+                        if (userData.maxSize > 0)
+                            arguments += $" -m {userData.maxSize}";
+
                         var processInfo = new ProcessStartInfo();
                         processInfo.UseShellExecute = false;
                         processInfo.RedirectStandardError = true;
                         processInfo.RedirectStandardOutput = true;
                         processInfo.FileName = $"{inDir}/TorrServer/{version}";
-                        processInfo.Arguments = $"--httpauth -p {info.port} -d {inDir}/sandbox/{info.user.id}";
+                        processInfo.Arguments = arguments;
 
                         var process = Process.Start(processInfo);
                         if (process != null)
@@ -247,7 +253,7 @@ namespace MatriX.API.Engine.Middlewares
                     }
                     #endregion
 
-                    if (!AppInit.settings.allowedToChangeSettings)
+                    if (!userData.allowedToChangeSettings)
                     {
                         await httpContext.Response.WriteAsync(string.Empty, httpContext.RequestAborted);
                         return;

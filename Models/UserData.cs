@@ -17,6 +17,10 @@ namespace MatriX.API.Models
 
         public string versionts { get; set; }
 
+        public bool allowedToChangeSettings { get; set; } = true;
+
+        public long maxSize { get; set; }
+
 
         public byte maxiptoIsLockHostOrUser { get; set; }
 
