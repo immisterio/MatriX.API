@@ -22,6 +22,8 @@ namespace MatriX.API.Models
 
         public bool AuthorizationRequired { get; set; } = true;
 
+        public bool allowedToChangeSettings { get; set; } = true;
+
         public string AuthorizationServerAPI { get; set; }
 
         public HashSet<Known> KnownProxies { get; set; } = new HashSet<Known>();

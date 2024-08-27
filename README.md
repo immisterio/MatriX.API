@@ -34,7 +34,7 @@ curl -s https://raw.githubusercontent.com/immisterio/MatriX.API/master/install.s
 * maxiptoIsLockHostOrUser - максимальной количество IP в час на пользователя
 * domainid_pattern - поиск domainid для доступа без авторизации, "^([^\\.])\\.matrix.io" / ogurchik.matrix.io
 * AuthorizationRequired - true доступ для пользователей usersDb.json / false любой логин и пароль
-* onlyRemoteApi - true разрешить работу ts на текущем сервере / false только на серверах перечисленных в servers
+* onlyRemoteApi - true режим API для master сервера / false master сервер
 * servers - список серверов
 * AuthorizationServerAPI - ip сервера с которого разрешены API запросы
 * interface_network - имя интерфейса для статистики нагрузки на канал (по умолчанию eth0)

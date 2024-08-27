@@ -50,7 +50,7 @@ namespace MatriX.API.Engine.Middlewares
             if (mem == null)
                 return server;
 
-            string mkey = $"RemoteAPI:serv:{userData.login}";
+            string mkey = $"RemoteAPI:serv:{userData.id}";
             if (mem.TryGetValue(mkey, out string _serv) && AppInit.settings.servers.FirstOrDefault(i => i.enable && i.status != 2 && i.host == _serv) != null)
             {
                 mem.Set(mkey, _serv, DateTime.Now.AddHours(4));

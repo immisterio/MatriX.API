@@ -150,10 +150,10 @@ namespace MatriX.API.Controllers
 			{
 				System.IO.File.WriteAllText($"{AppInit.appfolder}/usersDb.json", JsonConvert.SerializeObject(AppInit.usersDb, Formatting.Indented));
 
-				if (reload && TorAPI.db.TryGetValue(userData.login, out TorInfo info))
+				if (reload && TorAPI.db.TryGetValue(userData.id, out TorInfo info))
 				{
                     info?.Dispose();
-                    TorAPI.db.TryRemove(userData.login, out _);
+                    TorAPI.db.TryRemove(userData.id, out _);
                 }
 
 				if (reload && !string.IsNullOrEmpty(userData.server) && !RemoteAPI.serv(userData, null).Contains("127.0.0.1"))

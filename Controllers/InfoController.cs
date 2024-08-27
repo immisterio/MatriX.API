@@ -37,7 +37,7 @@ namespace MatriX.API.Controllers
                     lastActive = i.lastActive
                 };
 
-                if (memoryCache.TryGetValue($"memKeyLocIP:{i.user.login}:{DateTime.Now.Hour}", out HashSet<string> ips))
+                if (memoryCache.TryGetValue($"memKeyLocIP:{i.user.id}:{DateTime.Now.Hour}", out HashSet<string> ips))
                     temp.clientIps = ips;
 
                 newinfo.Add(temp);

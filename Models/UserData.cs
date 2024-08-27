@@ -30,5 +30,9 @@ namespace MatriX.API.Models
 
         [JsonIgnore]
         public string _ip { get; set; }
+
+
+        [JsonIgnore]
+        public string id { get; set; }
     }
 }

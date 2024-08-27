@@ -14,6 +14,7 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace MatriX.API.Engine.Middlewares
 {
@@ -77,7 +78,7 @@ namespace MatriX.API.Engine.Middlewares
             }
             #endregion
 
-            if (!db.TryGetValue(userData.login, out TorInfo info))
+            if (!db.TryGetValue(userData.id, out TorInfo info))
             {
                 if (httpContext.Request.Path.Value.StartsWith("/shutdown"))
                 {
@@ -99,7 +100,7 @@ namespace MatriX.API.Engine.Middlewares
                     lastActive = DateTime.Now
                 };
 
-                if (!db.TryAdd(userData.login, info))
+                if (!db.TryAdd(userData.id, info))
                 {
                     await httpContext.Response.WriteAsync("error: db.TryAdd(dbKeyOrLogin, info)");
                     return;
@@ -109,27 +110,31 @@ namespace MatriX.API.Engine.Middlewares
                 #endregion
 
                 #region Создаем папку пользователя
-                if (!File.Exists($"{inDir}/sandbox/{userData.login}/settings.json"))
+                if (!File.Exists($"{inDir}/sandbox/{userData.id}/settings.json"))
                 {
-                    Directory.CreateDirectory($"{inDir}/sandbox/{userData.login}");
-                    File.Copy($"{inDir}/TorrServer/default_settings.json", $"{inDir}/sandbox/{userData.login}/settings.json");
+                    Directory.CreateDirectory($"{inDir}/sandbox/{userData.id}");
+                    File.Copy($"{inDir}/TorrServer/default_settings.json", $"{inDir}/sandbox/{userData.id}/settings.json");
                 }
                 #endregion
 
                 #region Обновляем настройки по умолчанию
                 {
-                    string user_settings = File.ReadAllText($"{inDir}/sandbox/{userData.login}/settings.json");
                     string default_settings = File.ReadAllText($"{inDir}/TorrServer/default_settings.json");
 
-                    string ReaderReadAHead = Regex.Match(user_settings, "\"ReaderReadAHead\":([^,]+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
-                    string PreloadCache = Regex.Match(user_settings, "\"PreloadCache\":([^,]+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
+                    if (AppInit.settings.allowedToChangeSettings)
+                    {
+                        string user_settings = File.ReadAllText($"{inDir}/sandbox/{userData.id}/settings.json");
 
-                    default_settings = Regex.Replace(default_settings, "(\"ReaderReadAHead\"):([^,]+)", $"$1:{ReaderReadAHead}", RegexOptions.IgnoreCase);
-                    default_settings = Regex.Replace(default_settings, "(\"PreloadCache\"):([^,]+)", $"$1:{PreloadCache}", RegexOptions.IgnoreCase);
+                        string ReaderReadAHead = Regex.Match(user_settings, "\"ReaderReadAHead\":([^,]+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
+                        string PreloadCache = Regex.Match(user_settings, "\"PreloadCache\":([^,]+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
 
-                    default_settings = Regex.Replace(default_settings, "(\"PeersListenPort\"):([^,]+)", $"$1:{info.port+2}", RegexOptions.IgnoreCase);
+                        default_settings = Regex.Replace(default_settings, "(\"ReaderReadAHead\"):([^,]+)", $"$1:{ReaderReadAHead}", RegexOptions.IgnoreCase);
+                        default_settings = Regex.Replace(default_settings, "(\"PreloadCache\"):([^,]+)", $"$1:{PreloadCache}", RegexOptions.IgnoreCase);
 
-                    File.WriteAllText($"{inDir}/sandbox/{userData.login}/settings.json", default_settings);
+                        default_settings = Regex.Replace(default_settings, "(\"PeersListenPort\"):([^,]+)", $"$1:{info.port + 2}", RegexOptions.IgnoreCase);
+                    }
+
+                    File.WriteAllText($"{inDir}/sandbox/{userData.id}/settings.json", default_settings);
                 }
                 #endregion
 
@@ -138,14 +143,14 @@ namespace MatriX.API.Engine.Middlewares
                 {
                     try
                     {
-                        File.WriteAllText($"{inDir}/sandbox/{info.user.login}/accs.db", $"{{\"ts\":\"{passwd}\"}}");
+                        File.WriteAllText($"{inDir}/sandbox/{info.user.id}/accs.db", $"{{\"ts\":\"{passwd}\"}}");
 
                         var processInfo = new ProcessStartInfo();
                         processInfo.UseShellExecute = false;
                         processInfo.RedirectStandardError = true;
                         processInfo.RedirectStandardOutput = true;
                         processInfo.FileName = $"{inDir}/TorrServer/{version}";
-                        processInfo.Arguments = $"--httpauth -p {info.port} -d {inDir}/sandbox/{info.user.login}";
+                        processInfo.Arguments = $"--httpauth -p {info.port} -d {inDir}/sandbox/{info.user.id}";
 
                         var process = Process.Start(processInfo);
                         if (process != null)
@@ -175,7 +180,7 @@ namespace MatriX.API.Engine.Middlewares
                     string exception = info.exception;
 
                     info?.Dispose();
-                    db.TryRemove(userData.login, out _);
+                    db.TryRemove(userData.id, out _);
                     await httpContext.Response.WriteAsync(exception ?? "failed to start", httpContext.RequestAborted).ConfigureAwait(false);
                     return;
                 }
@@ -188,7 +193,7 @@ namespace MatriX.API.Engine.Middlewares
                 info.processForExit += (s, e) =>
                 {
                     info?.Dispose();
-                    db.TryRemove(userData.login, out _);
+                    db.TryRemove(userData.id, out _);
                 };
                 #endregion
             }
@@ -242,6 +247,12 @@ namespace MatriX.API.Engine.Middlewares
                     }
                     #endregion
 
+                    if (!AppInit.settings.allowedToChangeSettings)
+                    {
+                        await httpContext.Response.WriteAsync(string.Empty, httpContext.RequestAborted);
+                        return;
+                    }
+
                     #region Обновляем настройки кеша 
                     string ReaderReadAHead = Regex.Match(requestJson, "\"ReaderReadAHead\":([0-9]+)", RegexOptions.IgnoreCase).Groups[1].Value;
                     string PreloadCache = Regex.Match(requestJson, "\"PreloadCache\":([0-9]+)", RegexOptions.IgnoreCase).Groups[1].Value;
@@ -251,11 +262,10 @@ namespace MatriX.API.Engine.Middlewares
                     settingsJson = "{\"action\":\"set\",\"sets\":" + settingsJson + "}";
 
                     await client.PostAsync($"http://127.0.0.1:{info.port}/settings", new StringContent(settingsJson, Encoding.UTF8, "application/json"), httpContext.RequestAborted);
-                    #endregion
 
-                    // Успех
                     await httpContext.Response.WriteAsync(string.Empty, httpContext.RequestAborted);
                     return;
+                    #endregion
                 }
             }
             #endregion
@@ -263,7 +273,7 @@ namespace MatriX.API.Engine.Middlewares
             if (httpContext.Request.Path.Value.StartsWith("/shutdown"))
             {
                 info?.Dispose();
-                db.TryRemove(userData.login, out _);
+                db.TryRemove(userData.id, out _);
                 await httpContext.Response.WriteAsync("OK", httpContext.RequestAborted);
                 return;
             }
@@ -295,7 +305,7 @@ namespace MatriX.API.Engine.Middlewares
                 #region TorInfo
                 info = new TorInfo()
                 {
-                    user = new UserData() { login = login },
+                    user = new UserData() { id = login, login = login },
                     port = NextPort(),
                     lastActive = DateTime.Now
                 };

@@ -26,7 +26,7 @@ namespace MatriX.API.Engine.Middlewares
         #region IsLockHostOrUser
         bool IsLockHostOrUser(UserData user, out HashSet<string> ips)
         {
-            string memKeyLocIP = $"memKeyLocIP:{user.login}:{DateTime.Now.Hour}";
+            string memKeyLocIP = $"memKeyLocIP:{user.id}:{DateTime.Now.Hour}";
             string clientIP = user._ip;
 
             #region whiteip

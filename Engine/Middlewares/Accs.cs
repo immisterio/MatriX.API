@@ -78,13 +78,18 @@ namespace MatriX.API.Engine.Middlewares
 
                 if (!string.IsNullOrWhiteSpace(domainid))
                 {
-                    if (IsOkIp(clientIp) && AppInit.usersDb.FirstOrDefault(i => i.domainid == domainid) is UserData _domainUser)
+                    if (AppInit.usersDb.FirstOrDefault(i => i.domainid == domainid) is UserData _domainUser)
                     {
+                        if (!IsOkIp(clientIp))
+                            return httpContext.Response.WriteAsync("suspicious activity");
+
+                        _domainUser._ip = clientIp;
+                        _domainUser.id = domainid;
                         httpContext.Features.Set(_domainUser);
                         return _next(httpContext);
                     }
 
-                    return httpContext.Response.WriteAsync("user not found");
+                    //return httpContext.Response.WriteAsync("user not found");
                 }
             }
             #endregion
@@ -99,6 +104,7 @@ namespace MatriX.API.Engine.Middlewares
                 }
                 else if (memory.TryGetValue($"RemoteAPI:{clientIp}", out UserData _u))
                 {
+                    _u.id = _u.login ?? _u.domainid;
                     httpContext.Features.Set(_u);
                     return _next(httpContext);
                 }
@@ -134,7 +140,7 @@ namespace MatriX.API.Engine.Middlewares
                         {
                             string xcip = httpContext.Request.Headers["X-Client-IP"].ToString();
                             string versionts = httpContext.Request.Headers["X-Versionts"].ToString();
-                            httpContext.Features.Set(new UserData() { login = login, passwd = passwd, _ip = xcip, versionts = versionts, expires = DateTime.Now.AddDays(1) });
+                            httpContext.Features.Set(new UserData() { id = login, login = login, passwd = passwd, _ip = xcip, versionts = versionts, expires = DateTime.Now.AddDays(1) });
                             return _next(httpContext);
                         }
                         else if (AppInit.settings.AuthorizationRequired)
@@ -142,13 +148,14 @@ namespace MatriX.API.Engine.Middlewares
                             if (IsOkIp(clientIp) && AppInit.usersDb.FirstOrDefault(i => i.login == login) is UserData _u && _u.passwd == passwd)
                             {
                                 _u._ip = clientIp;
+                                _u.id = login;
                                 httpContext.Features.Set(_u);
                                 return _next(httpContext);
                             }
                         }
                         else
                         {
-                            httpContext.Features.Set(new UserData() { login = login, passwd = passwd, _ip = clientIp, expires = DateTime.Now.AddDays(1) });
+                            httpContext.Features.Set(new UserData() { id = login, login = login, passwd = passwd, _ip = clientIp, expires = DateTime.Now.AddDays(1) });
                             return _next(httpContext);
                         }
                     }
