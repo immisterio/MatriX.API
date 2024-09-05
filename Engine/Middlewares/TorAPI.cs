@@ -14,12 +14,16 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 
 namespace MatriX.API.Engine.Middlewares
 {
     public class TorAPI
     {
+        static TorAPI()
+        {
+            Directory.CreateDirectory("logs/process");
+        }
+
         #region TorAPI
         private readonly RequestDelegate _next;
 
@@ -35,14 +39,14 @@ namespace MatriX.API.Engine.Middlewares
         static int currentport = 40000;
         static int NextPort()
         {
-            currentport = currentport + 4;
+            currentport = currentport + Random.Shared.Next(2, 6);
             if (currentport > 60000)
-                currentport = 40000;
+                currentport = 40000 + Random.Shared.Next(2, 6);
 
             string ss = Bash.Run("ss -ln");
             if (ss != null && ss.Contains(currentport.ToString()))
             {
-                for (int i = currentport; i < 60000; i++)
+                for (int i = currentport+1; i < 60000; i++)
                 {
                     currentport = i;
                     if (!ss.Contains(currentport.ToString()))
@@ -164,15 +168,38 @@ namespace MatriX.API.Engine.Middlewares
                         var process = Process.Start(processInfo);
                         if (process != null)
                         {
+                            process.OutputDataReceived += (sender, args) =>
+                            {
+                                if (!string.IsNullOrEmpty(args.Data))
+                                    info.process_log += args.Data + "\n";
+                            };
+
+                            process.ErrorDataReceived += (sender, args) =>
+                            {
+                                if (!string.IsNullOrEmpty(args.Data))
+                                    info.process_log += args.Data + "\n";
+                            };
+
                             info.process = process;
-                            info.process.WaitForExit();
+                            process.BeginOutputReadLine();
+                            process.BeginErrorReadLine();
+                            process.WaitForExit();
                         }
                         else
                         {
                             info.exception = "process == null";
                         }
                     }
-                    catch (Exception ex) { info.exception = ex.ToString(); }
+                    catch (Exception ex) 
+                    { 
+                        info.exception = ex.ToString();
+
+                        try
+                        {
+                            File.AppendAllText($"logs/process/{info.user.id}_error.txt", $"{DateTime.Now}\n\n{info.exception}\n\n{info.process_log}\n\n==============================\n\n\n\n");
+                        }
+                        catch { }
+                    }
 
                     info.OnProcessForExit();
                 });
@@ -186,11 +213,8 @@ namespace MatriX.API.Engine.Middlewares
                     info.taskCompletionSource.SetResult(false);
                     info.taskCompletionSource = null;
 
-                    string exception = info.exception;
-
-                    info?.Dispose();
-                    db.TryRemove(userData.id, out _);
-                    await httpContext.Response.WriteAsync(exception ?? "failed to start", httpContext.RequestAborted).ConfigureAwait(false);
+                    info.OnProcessForExit();
+                    await httpContext.Response.WriteAsync(info?.exception ?? "failed to start", httpContext.RequestAborted);
                     return;
                 }
                 #endregion
@@ -201,7 +225,16 @@ namespace MatriX.API.Engine.Middlewares
                 #region Отслеживанием падение процесса
                 info.processForExit += (s, e) =>
                 {
-                    info?.Dispose();
+                    if (info.thread == null)
+                        return;
+
+                    try
+                    {
+                        File.AppendAllText($"logs/process/{info.user.id}_exit.txt", $"{DateTime.Now}\n\n{info.process_log}\n\n==============================\n\n\n\n");
+                    }
+                    catch { }
+
+                    info.Dispose();
                     db.TryRemove(userData.id, out _);
                 };
                 #endregion
@@ -211,7 +244,7 @@ namespace MatriX.API.Engine.Middlewares
             {
                 if (await info.taskCompletionSource.Task == false)
                 {
-                    await httpContext.Response.WriteAsync("failed to start", httpContext.RequestAborted).ConfigureAwait(false);
+                    await httpContext.Response.WriteAsync($"failed to start\n{info.exception}\n\n{info.process_log}", httpContext.RequestAborted);
                     return;
                 }
             }
@@ -281,7 +314,7 @@ namespace MatriX.API.Engine.Middlewares
 
             if (httpContext.Request.Path.Value.StartsWith("/shutdown"))
             {
-                info?.Dispose();
+                info.Dispose();
                 db.TryRemove(userData.id, out _);
                 await httpContext.Response.WriteAsync("OK", httpContext.RequestAborted);
                 return;
@@ -434,7 +467,7 @@ namespace MatriX.API.Engine.Middlewares
                 {
                     try
                     {
-                        if (DateTime.Now > endTimeCheckort || info?.exception != null)
+                        if (DateTime.Now > endTimeCheckort || info?.thread == null)
                             break;
 
                         await Task.Delay(50).ConfigureAwait(false);

@@ -31,6 +31,8 @@ namespace MatriX.API.Models
         [JsonIgnore]
         public Process process { get; set; }
 
+        public string process_log { get; set; } = string.Empty;
+
         public string exception { get; set; }
 
         public event EventHandler processForExit;
