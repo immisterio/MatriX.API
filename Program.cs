@@ -74,8 +74,8 @@ namespace MatriX.API
 
                             if (node.Value.countError >= 2 || DateTime.Now.AddMinutes(-AppInit.settings.worknodetominutes) > node.Value.lastActive)
                             {
-                                TorAPI.db.TryRemove(node.Key, out TorInfo torInfo);
-                                node.Value.Dispose();
+                                if (TorAPI.db.TryRemove(node.Key, out TorInfo torInfo))
+                                    node.Value.Dispose();
                             }
                             else
                             {

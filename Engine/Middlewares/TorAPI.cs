@@ -144,6 +144,23 @@ namespace MatriX.API.Engine.Middlewares
                 }
                 #endregion
 
+                #region Отслеживанием падение процесса
+                info.processForExit += (s, e) =>
+                {
+                    if (info.thread == null)
+                        return;
+
+                    try
+                    {
+                        File.AppendAllText($"logs/process/{info.user.id}_exit.txt", $"{DateTime.Now}\n\n{info.process_log}\n\n==============================\n\n\n\n");
+                    }
+                    catch { }
+
+                    info.Dispose();
+                    db.TryRemove(userData.id, out _);
+                };
+                #endregion
+
                 #region Запускаем TorrServer
                 info.thread = new Thread(() =>
                 {
@@ -221,23 +238,6 @@ namespace MatriX.API.Engine.Middlewares
 
                 info.taskCompletionSource.SetResult(true);
                 info.taskCompletionSource = null;
-
-                #region Отслеживанием падение процесса
-                info.processForExit += (s, e) =>
-                {
-                    if (info.thread == null)
-                        return;
-
-                    try
-                    {
-                        File.AppendAllText($"logs/process/{info.user.id}_exit.txt", $"{DateTime.Now}\n\n{info.process_log}\n\n==============================\n\n\n\n");
-                    }
-                    catch { }
-
-                    info.Dispose();
-                    db.TryRemove(userData.id, out _);
-                };
-                #endregion
             }
 
             if (info.taskCompletionSource != null)
@@ -467,7 +467,7 @@ namespace MatriX.API.Engine.Middlewares
                 {
                     try
                     {
-                        if (DateTime.Now > endTimeCheckort || info?.thread == null)
+                        if (DateTime.Now > endTimeCheckort || (info != null && info.thread == null))
                             break;
 
                         await Task.Delay(50).ConfigureAwait(false);
