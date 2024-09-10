@@ -2,7 +2,7 @@
 DEST="/home/matrix"
 
 apt-get update
-apt-get install -y wget unzip sysstat iproute2
+apt-get install -y wget unzip sysstat iproute2 lsof
 
 # Install .NET
 wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh 

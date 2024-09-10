@@ -22,6 +22,16 @@ namespace MatriX.API.Engine.Middlewares
         static TorAPI()
         {
             Directory.CreateDirectory("logs/process");
+
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                while (true)
+                {
+                    string result = Bash.Run("lsof -i -P -n");
+                    if (result != null)
+                        lsof = result;
+                }
+            });
         }
 
         #region TorAPI
@@ -31,30 +41,36 @@ namespace MatriX.API.Engine.Middlewares
 
         IHttpClientFactory httpClientFactory;
 
+        static string lsof = string.Empty;
+
         static string passwd = DateTime.Now.ToBinary().ToString();
         static string Authorization() => "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"ts:{passwd}"));
 
         public static ConcurrentDictionary<string, TorInfo> db = new ConcurrentDictionary<string, TorInfo>();
 
+
+        static readonly object portLock = new object();
         static int currentport = 40000;
         static int NextPort()
         {
-            currentport = currentport + Random.Shared.Next(2, 6);
-            if (currentport > 60000)
-                currentport = 40000 + Random.Shared.Next(2, 6);
-
-            string ss = Bash.Run("ss -ln");
-            if (ss != null && ss.Contains(currentport.ToString()))
+            lock (portLock)
             {
-                for (int i = currentport+1; i < 60000; i++)
-                {
-                    currentport = i;
-                    if (!ss.Contains(currentport.ToString()))
-                        break;
-                }
-            }
+                currentport = currentport + Random.Shared.Next(1, 8);
+                if (currentport > 60000)
+                    currentport = 40000 + Random.Shared.Next(1, 8);
 
-            return currentport;
+                if (lsof.Contains(currentport.ToString()))
+                {
+                    for (int i = currentport + 1; i < 60000; i++)
+                    {
+                        currentport = i;
+                        if (!lsof.Contains(currentport.ToString()))
+                            break;
+                    }
+                }
+
+                return currentport;
+            }
         }
 
         public TorAPI(RequestDelegate next, IMemoryCache memory, IHttpClientFactory httpClientFactory)
@@ -152,7 +168,8 @@ namespace MatriX.API.Engine.Middlewares
 
                     try
                     {
-                        File.AppendAllText($"logs/process/{info.user.id}_exit.txt", $"{DateTime.Now}\n\n{info.process_log}\n\n==============================\n\n\n\n");
+                        if (!string.IsNullOrWhiteSpace(info.process_log))
+                            File.AppendAllText($"logs/process/{info.user.id}_exit.txt", $"{DateTime.Now}\n\n{info.process_log}\n\n==============================\n\n\n\n");
                     }
                     catch { }
 
