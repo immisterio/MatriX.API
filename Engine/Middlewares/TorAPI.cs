@@ -14,11 +14,21 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
+using System.Net;
 
 namespace MatriX.API.Engine.Middlewares
 {
     public class TorAPI
     {
+        #region TorAPI - static
+        public static ConcurrentDictionary<string, TorInfo> db = new ConcurrentDictionary<string, TorInfo>();
+
+        static string lsof = string.Empty;
+
+        static string passwd = DateTime.Now.ToBinary().ToString();
+        static string Authorization() => "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"ts:{passwd}"));
+
         static TorAPI()
         {
             Directory.CreateDirectory("logs/process");
@@ -33,6 +43,7 @@ namespace MatriX.API.Engine.Middlewares
                 }
             });
         }
+        #endregion
 
         #region TorAPI
         private readonly RequestDelegate _next;
@@ -41,23 +52,24 @@ namespace MatriX.API.Engine.Middlewares
 
         IHttpClientFactory httpClientFactory;
 
-        static string lsof = string.Empty;
+        public TorAPI(RequestDelegate next, IMemoryCache memory, IHttpClientFactory httpClientFactory)
+        {
+            _next = next;
+            this.memory = memory;
+            this.httpClientFactory = httpClientFactory;
+        }
+        #endregion
 
-        static string passwd = DateTime.Now.ToBinary().ToString();
-        static string Authorization() => "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"ts:{passwd}"));
-
-        public static ConcurrentDictionary<string, TorInfo> db = new ConcurrentDictionary<string, TorInfo>();
-
-
+        #region NextPort
         static readonly object portLock = new object();
         static int currentport = 40000;
         static int NextPort()
         {
             lock (portLock)
             {
-                currentport = currentport + Random.Shared.Next(1, 8);
+                currentport = currentport + Random.Shared.Next(5, 20);
                 if (currentport > 60000)
-                    currentport = 40000 + Random.Shared.Next(1, 8);
+                    currentport = 40000 + Random.Shared.Next(5, 20);
 
                 if (lsof.Contains(currentport.ToString()))
                 {
@@ -72,12 +84,30 @@ namespace MatriX.API.Engine.Middlewares
                 return currentport;
             }
         }
+        #endregion
 
-        public TorAPI(RequestDelegate next, IMemoryCache memory, IHttpClientFactory httpClientFactory)
+        #region IsPortInUse
+        static bool IsPortInUse(int port)
         {
-            _next = next;
-            this.memory = memory;
-            this.httpClientFactory = httpClientFactory;
+            bool isUsed = false;
+            TcpListener listener = null;
+
+            try
+            {
+                listener = new TcpListener(IPAddress.Any, port);
+                listener.Start();
+            }
+            catch (SocketException)
+            {
+                isUsed = true; // Порт занят
+            }
+            finally
+            {
+                // Если слушатель был создан, останавливаем его
+                listener?.Stop();
+            }
+
+            return isUsed;
         }
         #endregion
 
@@ -112,11 +142,15 @@ namespace MatriX.API.Engine.Middlewares
                 if (version != "latest" && !File.Exists($"{inDir}/TorrServer/{version}"))
                     version = "latest";
 
+                int port = NextPort();
+                while(IsPortInUse(port))
+                    port = NextPort();
+
                 #region TorInfo
                 info = new TorInfo()
                 {
                     user = userData,
-                    port = NextPort(),
+                    port = port,
                     lastActive = DateTime.Now
                 };
 

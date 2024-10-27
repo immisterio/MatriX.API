@@ -25,30 +25,6 @@ namespace MatriX.API.Engine.Middlewares
         }
         #endregion
 
-        #region IsOkIp
-        bool IsOkIp(string ip)
-        {
-            string memKeyLocIP = $"Accs:IsOkIp:{ip}:{DateTime.Now.Hour}";
-
-            if (memory.TryGetValue(memKeyLocIP, out HashSet<string> ips))
-            {
-                ips.Add(ip);
-                memory.Set(memKeyLocIP, ips, DateTime.Now.AddHours(1));
-
-                if (ips.Count > 10)
-                    return false;
-            }
-            else
-            {
-                ips = new HashSet<string>() { ip };
-                memory.Set(memKeyLocIP, ips, DateTime.Now.AddHours(1));
-            }
-
-            return true;
-        }
-        #endregion
-
-
         public Task Invoke(HttpContext httpContext)
         {
             #region Служебный запрос
@@ -80,9 +56,6 @@ namespace MatriX.API.Engine.Middlewares
                 {
                     if (AppInit.usersDb.FirstOrDefault(i => i.domainid == domainid) is UserData _domainUser)
                     {
-                        if (!IsOkIp(clientIp))
-                            return httpContext.Response.WriteAsync("suspicious activity");
-
                         _domainUser._ip = clientIp;
                         _domainUser.id = domainid;
                         httpContext.Features.Set(_domainUser);
@@ -105,6 +78,7 @@ namespace MatriX.API.Engine.Middlewares
                 else if (memory.TryGetValue($"RemoteAPI:{clientIp}", out UserData _u))
                 {
                     _u.id = _u.login ?? _u.domainid;
+                    _u._ip = clientIp;
                     httpContext.Features.Set(_u);
                     return _next(httpContext);
                 }
@@ -145,7 +119,7 @@ namespace MatriX.API.Engine.Middlewares
                         }
                         else if (AppInit.settings.AuthorizationRequired)
                         {
-                            if (IsOkIp(clientIp) && AppInit.usersDb.FirstOrDefault(i => i.login == login) is UserData _u && _u.passwd == passwd)
+                            if (AppInit.usersDb.FirstOrDefault(i => i.login == login) is UserData _u && _u.passwd == passwd)
                             {
                                 _u._ip = clientIp;
                                 _u.id = login;
