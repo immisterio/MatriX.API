@@ -22,6 +22,8 @@ namespace MatriX.API.Models
 
         public string domainid_pattern { get; set; } = "^([^\\.]{8})\\.";
 
+        public bool UserNotFoundToError { get; set; } = true;
+
         public bool AuthorizationRequired { get; set; } = true;
 
         public string AuthorizationServerAPI { get; set; }

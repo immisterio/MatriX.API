@@ -62,7 +62,11 @@ namespace MatriX.API.Engine.Middlewares
                         return _next(httpContext);
                     }
 
-                    //return httpContext.Response.WriteAsync("user not found");
+                    if (AppInit.settings.UserNotFoundToError)
+                    {
+                        httpContext.Response.StatusCode = 404;
+                        return httpContext.Response.WriteAsync("user not found");
+                    }
                 }
             }
             #endregion
