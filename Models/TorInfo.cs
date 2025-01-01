@@ -54,6 +54,7 @@ namespace MatriX.API.Models
             try
             {
                 IsDispose = true;
+                int _pid = process.Id;
 
                 #region process
                 try
@@ -67,11 +68,13 @@ namespace MatriX.API.Models
                 #region Bash
                 try
                 {
-                    foreach (string line in Bash.Run($"ps axu | grep \"/TorrServer-linux-amd64 -p {port} -d\" " + "| grep -v grep | awk '{print $2}'").Split("\n"))
+                    foreach (string line in Bash.Run($"ps axu | grep \"/sandbox/{user.id}\" " + "| grep -v grep | awk '{print $2}'").Split("\n"))
                     {
                         if (int.TryParse(line, out int pid))
                             Bash.Run($"kill -9 {pid}");
                     }
+
+                    Bash.Run($"kill -9 {_pid}");
                 }
                 catch { }
                 #endregion

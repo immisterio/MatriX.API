@@ -142,19 +142,14 @@ namespace MatriX.API.Engine.Middlewares
                 if (version != "latest" && !File.Exists($"{inDir}/TorrServer/{version}"))
                     version = "latest";
 
-                int port = NextPort();
-                while(IsPortInUse(port))
-                    port = NextPort();
-
                 #region TorInfo
                 info = new TorInfo()
                 {
                     user = userData,
-                    port = port,
                     lastActive = DateTime.Now
                 };
 
-                if (!db.TryAdd(userData.id, info))
+                if (!db.TryAdd(info.user.id, info))
                 {
                     await httpContext.Response.WriteAsync("error: db.TryAdd(dbKeyOrLogin, info)");
                     return;
@@ -163,11 +158,15 @@ namespace MatriX.API.Engine.Middlewares
                 info.taskCompletionSource = new TaskCompletionSource<bool>();
                 #endregion
 
+                info.port = NextPort();
+                while(IsPortInUse(info.port))
+                    info.port = NextPort();
+
                 #region Создаем папку пользователя
-                if (!File.Exists($"{inDir}/sandbox/{userData.id}/settings.json"))
+                if (!File.Exists($"{inDir}/sandbox/{info.user.id}/settings.json"))
                 {
-                    Directory.CreateDirectory($"{inDir}/sandbox/{userData.id}");
-                    File.Copy($"{inDir}/TorrServer/default_settings.json", $"{inDir}/sandbox/{userData.id}/settings.json");
+                    Directory.CreateDirectory($"{inDir}/sandbox/{info.user.id}");
+                    File.Copy($"{inDir}/TorrServer/default_settings.json", $"{inDir}/sandbox/{info.user.id}/settings.json");
                 }
                 #endregion
 
@@ -175,9 +174,9 @@ namespace MatriX.API.Engine.Middlewares
                 {
                     string default_settings = File.ReadAllText($"{inDir}/TorrServer/default_settings.json");
 
-                    if (userData.allowedToChangeSettings)
+                    if (info.user.allowedToChangeSettings)
                     {
-                        string user_settings = File.ReadAllText($"{inDir}/sandbox/{userData.id}/settings.json");
+                        string user_settings = File.ReadAllText($"{inDir}/sandbox/{info.user.id}/settings.json");
 
                         string ReaderReadAHead = Regex.Match(user_settings, "\"ReaderReadAHead\":([^,]+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
                         string PreloadCache = Regex.Match(user_settings, "\"PreloadCache\":([^,]+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
@@ -187,10 +186,10 @@ namespace MatriX.API.Engine.Middlewares
 
                         default_settings = Regex.Replace(default_settings, "(\"PeersListenPort\"):([^,]+)", $"$1:{info.port + 2}", RegexOptions.IgnoreCase);
 
-                        File.WriteAllText($"{inDir}/sandbox/{userData.id}/settings.json", default_settings);
+                        File.WriteAllText($"{inDir}/sandbox/{info.user.id}/settings.json", default_settings);
                     }
-                    else if (!File.Exists($"{inDir}/sandbox/{userData.id}/settings.json"))
-                        File.WriteAllText($"{inDir}/sandbox/{userData.id}/settings.json", default_settings);
+                    else if (!File.Exists($"{inDir}/sandbox/{info.user.id}/settings.json"))
+                        File.WriteAllText($"{inDir}/sandbox/{info.user.id}/settings.json", default_settings);
                 }
                 #endregion
 
@@ -208,7 +207,7 @@ namespace MatriX.API.Engine.Middlewares
                     catch { }
 
                     info.Dispose();
-                    db.TryRemove(userData.id, out _);
+                    db.TryRemove(info.user.id, out _);
                 };
                 #endregion
 
@@ -221,9 +220,9 @@ namespace MatriX.API.Engine.Middlewares
 
                         string arguments = $"--httpauth -p {info.port} -d {inDir}/sandbox/{info.user.id}";
 
-                        if (userData.maxSize > 0)
-                            arguments += $" -m {userData.maxSize}";
-                        else if (AppInit.settings.maxSize > 0 && userData.maxSize != -1)
+                        if (info.user.maxSize > 0)
+                            arguments += $" -m {info.user.maxSize}";
+                        else if (AppInit.settings.maxSize > 0 && info.user.maxSize != -1)
                             arguments += $" -m {AppInit.settings.maxSize}";
 
                         var processInfo = new ProcessStartInfo();
@@ -301,7 +300,7 @@ namespace MatriX.API.Engine.Middlewares
             }
 
             // IP клиента и время последнего запроса
-            info.clientIps.Add(userData._ip);
+            info.clientIps.Add(info.user._ip);
             info.lastActive = DateTime.Now;
 
             #region settings
@@ -340,7 +339,7 @@ namespace MatriX.API.Engine.Middlewares
                     }
                     #endregion
 
-                    if (!userData.allowedToChangeSettings)
+                    if (!info.user.allowedToChangeSettings)
                     {
                         await httpContext.Response.WriteAsync(string.Empty, httpContext.RequestAborted);
                         return;
@@ -366,7 +365,7 @@ namespace MatriX.API.Engine.Middlewares
             if (httpContext.Request.Path.Value.StartsWith("/shutdown"))
             {
                 info.Dispose();
-                db.TryRemove(userData.id, out _);
+                db.TryRemove(info.user.id, out _);
                 await httpContext.Response.WriteAsync("OK", httpContext.RequestAborted);
                 return;
             }
