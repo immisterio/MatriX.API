@@ -202,7 +202,7 @@ namespace MatriX.API.Engine.Middlewares
 
                     try
                     {
-                        if (!string.IsNullOrWhiteSpace(info.process_log))
+                        if (!string.IsNullOrWhiteSpace(info.process_log) && !info.user.shared)
                             File.AppendAllText($"logs/process/{info.user.id}_exit.txt", $"{DateTime.Now}\n\n{info.process_log}\n\n==============================\n\n\n\n");
                     }
                     catch { }
@@ -675,7 +675,8 @@ namespace MatriX.API.Engine.Middlewares
         {
             try
             {
-                File.AppendAllText($"logs/process/{userid}_action.txt", $"{DateTime.Now} | {msg}\n");
+                if (!userid.Contains("/"))
+                    File.AppendAllText($"logs/process/{userid}_action.txt", $"{DateTime.Now} | {msg}\n");
             }
             catch { }
         }

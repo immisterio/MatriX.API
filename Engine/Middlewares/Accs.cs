@@ -55,6 +55,16 @@ namespace MatriX.API.Engine.Middlewares
                 {
                     if (AppInit.usersDb.FirstOrDefault(i => i.domainid == domainid) is UserData _domainUser)
                     {
+                        if (_domainUser.shared)
+                        {
+                            var ushared = _domainUser.Clone();
+                            ushared._ip = clientIp;
+                            ushared.id = $"{domainid}/{clientIp.Replace(":", "_")}";
+
+                            httpContext.Features.Set(ushared);
+                            return _next(httpContext);
+                        }
+
                         _domainUser._ip = clientIp;
                         _domainUser.id = domainid;
                         httpContext.Features.Set(_domainUser);
@@ -129,6 +139,16 @@ namespace MatriX.API.Engine.Middlewares
                         {
                             if (AppInit.usersDb.FirstOrDefault(i => i.login == login) is UserData _u && _u.passwd == passwd)
                             {
+                                if (_u.shared)
+                                {
+                                    var ushared = _u.Clone();
+                                    ushared._ip = clientIp;
+                                    ushared.id = $"{login}/{clientIp.Replace(":", "_")}";
+
+                                    httpContext.Features.Set(ushared);
+                                    return _next(httpContext);
+                                }
+
                                 _u._ip = clientIp;
                                 _u.id = login;
                                 httpContext.Features.Set(_u);

@@ -21,6 +21,8 @@ namespace MatriX.API.Models
 
         public bool shutdown { get; set; } = true;
 
+        public bool shared { get; set; }
+
         public long maxSize { get; set; }
 
 
@@ -40,5 +42,11 @@ namespace MatriX.API.Models
 
         [JsonIgnore]
         public string id { get; set; }
+
+
+        public UserData Clone()
+        {
+            return (UserData)MemberwiseClone();
+        }
     }
 }
