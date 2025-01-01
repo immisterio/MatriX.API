@@ -136,7 +136,7 @@ namespace MatriX.API.Engine.Middlewares
                     return;
                 }
 
-                logAction(info.user.id, "start run");
+                logAction(userData.id, "start run");
                 string inDir = AppInit.appfolder;
                 string version = string.IsNullOrEmpty(userData.versionts) ? "latest" : userData.versionts;
 
@@ -284,7 +284,7 @@ namespace MatriX.API.Engine.Middlewares
 
                     info.Dispose();
                     db.TryRemove(info.user.id, out _);
-                    logAction(info.user.id, "stop - CheckPort false");
+                    logAction(info.user.id, "stop - checkport");
                     await httpContext.Response.WriteAsync(info?.exception ?? "failed to start", httpContext.RequestAborted);
                     return;
                 }
@@ -474,7 +474,7 @@ namespace MatriX.API.Engine.Middlewares
 
                     info?.Dispose();
                     db.TryRemove(login, out _);
-                    logAction(info.user.id, "stop - CheckPort false");
+                    logAction(info.user.id, "stop - checkport");
                     await httpContext.Response.WriteAsync(exception ?? "failed to start", httpContext.RequestAborted).ConfigureAwait(false);
                     return;
                 }
@@ -488,7 +488,7 @@ namespace MatriX.API.Engine.Middlewares
                 {
                     info?.Dispose();
                     db.TryRemove(login, out _);
-                    logAction(info.user.id, "stop - processForExit false");
+                    logAction(info.user.id, "stop - processForExit");
                 };
                 #endregion
             }
