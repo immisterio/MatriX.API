@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Caching.Memory;
 using System.IO;
-using System.Collections.Generic;
 
 namespace MatriX.API.Engine.Middlewares
 {
@@ -121,7 +120,7 @@ namespace MatriX.API.Engine.Middlewares
                             httpContext.Features.Set(new UserData() { id = login, login = login, passwd = passwd, _ip = xcip, versionts = versionts, expires = DateTime.Now.AddDays(1) });
                             return _next(httpContext);
                         }
-                        else if (AppInit.settings.AuthorizationRequired)
+                        else
                         {
                             if (AppInit.usersDb.FirstOrDefault(i => i.login == login) is UserData _u && _u.passwd == passwd)
                             {
@@ -130,11 +129,11 @@ namespace MatriX.API.Engine.Middlewares
                                 httpContext.Features.Set(_u);
                                 return _next(httpContext);
                             }
-                        }
-                        else
-                        {
-                            httpContext.Features.Set(new UserData() { id = login, login = login, passwd = passwd, _ip = clientIp, expires = DateTime.Now.AddDays(1) });
-                            return _next(httpContext);
+                            else if (AppInit.settings.AuthorizationRequired)
+                            {
+                                httpContext.Features.Set(new UserData() { id = login, login = login, passwd = passwd, _ip = clientIp, expires = DateTime.Now.AddDays(1) });
+                                return _next(httpContext);
+                            }
                         }
                     }
                 }
