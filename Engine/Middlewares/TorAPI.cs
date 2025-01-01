@@ -136,6 +136,7 @@ namespace MatriX.API.Engine.Middlewares
                     return;
                 }
 
+                logAction(info.user.id, "start run");
                 string inDir = AppInit.appfolder;
                 string version = string.IsNullOrEmpty(userData.versionts) ? "latest" : userData.versionts;
 
@@ -208,6 +209,7 @@ namespace MatriX.API.Engine.Middlewares
 
                     info.Dispose();
                     db.TryRemove(info.user.id, out _);
+                    logAction(info.user.id, "stop - processForExit");
                 };
                 #endregion
 
@@ -280,12 +282,15 @@ namespace MatriX.API.Engine.Middlewares
                     info.taskCompletionSource.SetResult(false);
                     info.taskCompletionSource = null;
 
-                    info.OnProcessForExit();
+                    info.Dispose();
+                    db.TryRemove(info.user.id, out _);
+                    logAction(info.user.id, "stop - CheckPort false");
                     await httpContext.Response.WriteAsync(info?.exception ?? "failed to start", httpContext.RequestAborted);
                     return;
                 }
                 #endregion
 
+                logAction(info.user.id, "start ok");
                 info.taskCompletionSource.SetResult(true);
                 info.taskCompletionSource = null;
             }
@@ -364,8 +369,13 @@ namespace MatriX.API.Engine.Middlewares
 
             if (httpContext.Request.Path.Value.StartsWith("/shutdown"))
             {
-                info.Dispose();
-                db.TryRemove(info.user.id, out _);
+                if (info.user.shutdown)
+                {
+                    info.Dispose();
+                    db.TryRemove(info.user.id, out _);
+                    logAction(info.user.id, "stop - shutdown");
+                }
+
                 await httpContext.Response.WriteAsync("OK", httpContext.RequestAborted);
                 return;
             }
@@ -464,6 +474,7 @@ namespace MatriX.API.Engine.Middlewares
 
                     info?.Dispose();
                     db.TryRemove(login, out _);
+                    logAction(info.user.id, "stop - CheckPort false");
                     await httpContext.Response.WriteAsync(exception ?? "failed to start", httpContext.RequestAborted).ConfigureAwait(false);
                     return;
                 }
@@ -477,6 +488,7 @@ namespace MatriX.API.Engine.Middlewares
                 {
                     info?.Dispose();
                     db.TryRemove(login, out _);
+                    logAction(info.user.id, "stop - processForExit false");
                 };
                 #endregion
             }
@@ -654,6 +666,18 @@ namespace MatriX.API.Engine.Middlewares
                     ArrayPool<byte>.Shared.Return(buffer);
                 }
             }
+        }
+        #endregion
+
+
+        #region logAction
+        public static void logAction(string userid, string msg)
+        {
+            try
+            {
+                File.AppendAllText($"logs/process/{userid}_action.txt", $"{DateTime.Now} | {msg}\n");
+            }
+            catch { }
         }
         #endregion
     }

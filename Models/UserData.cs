@@ -19,6 +19,8 @@ namespace MatriX.API.Models
 
         public bool allowedToChangeSettings { get; set; } = true;
 
+        public bool shutdown { get; set; } = true;
+
         public long maxSize { get; set; }
 
 
