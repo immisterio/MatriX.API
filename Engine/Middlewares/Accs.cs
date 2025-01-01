@@ -60,6 +60,11 @@ namespace MatriX.API.Engine.Middlewares
                         httpContext.Features.Set(_domainUser);
                         return _next(httpContext);
                     }
+                    else if (AppInit.settings.AuthorizationRequired)
+                    {
+                        httpContext.Features.Set(new UserData() { id = domainid, login = domainid, passwd = "ts", _ip = clientIp, expires = DateTime.Now.AddDays(1) });
+                        return _next(httpContext);
+                    }
 
                     if (AppInit.settings.UserNotFoundToError)
                     {
