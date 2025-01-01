@@ -17,6 +17,8 @@ namespace MatriX.API.Models
 
         public string versionts { get; set; }
 
+        public string default_settings { get; set; } = "default_settings.json";
+
         public bool allowedToChangeSettings { get; set; } = true;
 
         public bool shutdown { get; set; } = true;

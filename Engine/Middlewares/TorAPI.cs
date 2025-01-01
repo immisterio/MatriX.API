@@ -167,13 +167,13 @@ namespace MatriX.API.Engine.Middlewares
                 if (!File.Exists($"{inDir}/sandbox/{info.user.id}/settings.json"))
                 {
                     Directory.CreateDirectory($"{inDir}/sandbox/{info.user.id}");
-                    File.Copy($"{inDir}/TorrServer/default_settings.json", $"{inDir}/sandbox/{info.user.id}/settings.json");
+                    File.Copy($"{inDir}/TorrServer/{info.user.default_settings}", $"{inDir}/sandbox/{info.user.id}/settings.json");
                 }
                 #endregion
 
                 #region Обновляем настройки по умолчанию
                 {
-                    string default_settings = File.ReadAllText($"{inDir}/TorrServer/default_settings.json");
+                    string default_settings = File.ReadAllText($"{inDir}/TorrServer/{info.user.default_settings}");
 
                     if (info.user.allowedToChangeSettings)
                     {
