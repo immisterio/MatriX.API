@@ -70,7 +70,7 @@ namespace MatriX.API.Engine.Middlewares
                         httpContext.Features.Set(_domainUser);
                         return _next(httpContext);
                     }
-                    else if (AppInit.settings.AuthorizationRequired)
+                    else if (AppInit.settings.AuthorizationRequired == false)
                     {
                         httpContext.Features.Set(new UserData() { id = domainid, login = domainid, passwd = "ts", _ip = clientIp, expires = DateTime.Now.AddDays(1) });
                         return _next(httpContext);
@@ -154,7 +154,7 @@ namespace MatriX.API.Engine.Middlewares
                                 httpContext.Features.Set(_u);
                                 return _next(httpContext);
                             }
-                            else if (AppInit.settings.AuthorizationRequired)
+                            else if (AppInit.settings.AuthorizationRequired == false)
                             {
                                 httpContext.Features.Set(new UserData() { id = login, login = login, passwd = passwd, _ip = clientIp, expires = DateTime.Now.AddDays(1) });
                                 return _next(httpContext);
