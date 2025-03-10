@@ -24,6 +24,8 @@ namespace MatriX.API.Models
 
         public bool UserNotFoundToError { get; set; } = true;
 
+        public string UserNotFoundToMessage { get; set; } = "user not found";
+
         public bool AuthorizationRequired { get; set; } = true;
 
         public string AuthorizationServerAPI { get; set; }

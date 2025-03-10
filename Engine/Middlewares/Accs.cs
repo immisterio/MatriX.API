@@ -78,8 +78,8 @@ namespace MatriX.API.Engine.Middlewares
 
                     if (AppInit.settings.UserNotFoundToError)
                     {
-                        httpContext.Response.StatusCode = 404;
-                        return httpContext.Response.WriteAsync("user not found");
+                        httpContext.Response.StatusCode = 403;
+                        return httpContext.Response.WriteAsync(AppInit.settings.UserNotFoundToMessage);
                     }
                 }
             }
