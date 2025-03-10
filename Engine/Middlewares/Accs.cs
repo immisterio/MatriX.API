@@ -79,6 +79,7 @@ namespace MatriX.API.Engine.Middlewares
                     if (AppInit.settings.UserNotFoundToError)
                     {
                         httpContext.Response.StatusCode = 403;
+                        httpContext.Response.ContentType = "text/plain; charset=utf-8";
                         return httpContext.Response.WriteAsync(AppInit.settings.UserNotFoundToMessage);
                     }
                 }
