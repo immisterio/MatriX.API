@@ -27,6 +27,9 @@ namespace MatriX.API.Engine.Middlewares
 
             httpContext.Response.Headers.Append("MatriX-API", "https://github.com/immisterio/MatriX.API");
 
+            if (HttpMethods.IsOptions(httpContext.Request.Method))
+                return Task.CompletedTask;
+
             return _next(httpContext);
         }
     }
