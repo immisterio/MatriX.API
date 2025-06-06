@@ -62,5 +62,20 @@ namespace MatriX.API
             }
         }
         #endregion
+
+
+        public static void SaveUsersDb(ConcurrentBag<UserData> users)
+        {
+            string path = $"{appfolder}/usersDb.json";
+            var settings = new JsonSerializerSettings
+            {
+                Formatting = Formatting.Indented,
+                NullValueHandling = NullValueHandling.Ignore,
+                DefaultValueHandling = DefaultValueHandling.Ignore
+            };
+            File.WriteAllText(path, JsonConvert.SerializeObject(users, settings));
+            cacheusersDb.Item2 = File.GetLastWriteTime(path);
+            cacheusersDb.Item1 = users;
+        }
     }
 }
