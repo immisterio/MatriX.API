@@ -87,6 +87,8 @@ namespace MatriX.API.Engine.Middlewares
             }
             #endregion
 
+            memory.Set($"RemoteAPI:{userData._ip}", userData, DateTime.Now.AddHours(5));
+
             string serip = serv(userData, memory);
             if (serip.Contains("127.0.0.1"))
             {
@@ -99,8 +101,6 @@ namespace MatriX.API.Engine.Middlewares
                 await _next(httpContext);
                 return;
             }
-
-            memory.Set($"RemoteAPI:{userData._ip}", userData, DateTime.Now.AddHours(5));
 
             if (Regex.IsMatch(httpContext.Request.Path.Value, "^/(stream|playlist|play/)"))
             {
@@ -176,7 +176,7 @@ namespace MatriX.API.Engine.Middlewares
                 }
             }
             
-            requestMessage.Headers.Add("Authorization", "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"{userData.login}:{userData.passwd}")));
+            requestMessage.Headers.Add("Authorization", "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"{userData.login ?? userData.domainid}:{userData.passwd ?? "ts"}")));
             requestMessage.Headers.Add("X-Client-IP", userData._ip);
             requestMessage.Headers.Add("X-Versionts", userData.versionts ?? "latest");
 

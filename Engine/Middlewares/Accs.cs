@@ -136,6 +136,10 @@ namespace MatriX.API.Engine.Middlewares
                             httpContext.Features.Set(new UserData() { id = login, login = login, passwd = passwd, _ip = xcip, versionts = versionts, expires = DateTime.Now.AddDays(1) });
                             return _next(httpContext);
                         }
+                        else if (!string.IsNullOrEmpty(AppInit.settings.AuthorizationServerAPI))
+                        {
+                            return httpContext.Response.WriteAsync(clientIp);
+                        }
                         else
                         {
                             if (AppInit.usersDb.FirstOrDefault(i => i.login == login) is UserData _u && _u.passwd == passwd)
