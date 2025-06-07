@@ -138,7 +138,7 @@ namespace MatriX.API.Engine.Middlewares
                         }
                         else if (!string.IsNullOrEmpty(AppInit.settings.AuthorizationServerAPI))
                         {
-                            return httpContext.Response.WriteAsync(clientIp);
+                            return httpContext.Response.WriteAsync($"AuthorizationServerAPI != {clientIp}");
                         }
                         else
                         {

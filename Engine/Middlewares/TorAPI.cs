@@ -116,7 +116,7 @@ namespace MatriX.API.Engine.Middlewares
             #region search / torinfo / control
             if (httpContext.Request.Path.Value.StartsWith("/search"))
             {
-                await RutorSearch(httpContext);
+                await RutorSearch(httpContext).ConfigureAwait(false);
                 return;
             }
 
@@ -285,7 +285,7 @@ namespace MatriX.API.Engine.Middlewares
                     info.Dispose();
                     db.TryRemove(info.user.id, out _);
                     logAction(info.user.id, "stop - checkport");
-                    await httpContext.Response.WriteAsync(info?.exception ?? "failed to start", httpContext.RequestAborted);
+                    await httpContext.Response.WriteAsync(info?.exception ?? "failed to start", httpContext.RequestAborted).ConfigureAwait(false);
                     return;
                 }
                 #endregion
@@ -299,7 +299,7 @@ namespace MatriX.API.Engine.Middlewares
             {
                 if (await info.taskCompletionSource.Task == false)
                 {
-                    await httpContext.Response.WriteAsync($"failed to start\n{info.exception}\n\n{info.process_log}", httpContext.RequestAborted);
+                    await httpContext.Response.WriteAsync($"failed to start\n{info.exception}\n\n{info.process_log}", httpContext.RequestAborted).ConfigureAwait(false);
                     return;
                 }
             }
@@ -314,7 +314,7 @@ namespace MatriX.API.Engine.Middlewares
                 if (httpContext.Request.Method != "POST")
                 {
                     httpContext.Response.StatusCode = 404;
-                    await httpContext.Response.WriteAsync("404 page not found", httpContext.RequestAborted);
+                    await httpContext.Response.WriteAsync("404 page not found", httpContext.RequestAborted).ConfigureAwait(false);
                     return;
                 }
 
@@ -331,22 +331,22 @@ namespace MatriX.API.Engine.Middlewares
                     #endregion
 
                     #region Актуальные настройки
-                    var response = await client.PostAsync($"http://127.0.0.1:{info.port}/settings", new StringContent("{\"action\":\"get\"}", Encoding.UTF8, "application/json"), httpContext.RequestAborted);
-                    string settingsJson = await response.Content.ReadAsStringAsync();
+                    var response = await client.PostAsync($"http://127.0.0.1:{info.port}/settings", new StringContent("{\"action\":\"get\"}", Encoding.UTF8, "application/json"), httpContext.RequestAborted).ConfigureAwait(false);
+                    string settingsJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                     if (requestJson.Trim() == "{\"action\":\"get\"}")
                     {
                         settingsJson = Regex.Replace(settingsJson, "(\"EnableRutorSearch\"):([^,]+)", $"$1:true", RegexOptions.IgnoreCase);
 
                         httpContext.Response.ContentType = "application/json; charset=utf-8";
-                        await httpContext.Response.WriteAsync(settingsJson, httpContext.RequestAborted);
+                        await httpContext.Response.WriteAsync(settingsJson, httpContext.RequestAborted).ConfigureAwait(false);
                         return;
                     }
                     #endregion
 
                     if (!info.user.allowedToChangeSettings)
                     {
-                        await httpContext.Response.WriteAsync(string.Empty, httpContext.RequestAborted);
+                        await httpContext.Response.WriteAsync(string.Empty, httpContext.RequestAborted).ConfigureAwait(false);
                         return;
                     }
 
@@ -358,9 +358,9 @@ namespace MatriX.API.Engine.Middlewares
                     settingsJson = Regex.Replace(settingsJson, "\"PreloadCache\":([0-9]+)", $"\"PreloadCache\":{PreloadCache}", RegexOptions.IgnoreCase);
                     settingsJson = "{\"action\":\"set\",\"sets\":" + settingsJson + "}";
 
-                    await client.PostAsync($"http://127.0.0.1:{info.port}/settings", new StringContent(settingsJson, Encoding.UTF8, "application/json"), httpContext.RequestAborted);
+                    await client.PostAsync($"http://127.0.0.1:{info.port}/settings", new StringContent(settingsJson, Encoding.UTF8, "application/json"), httpContext.RequestAborted).ConfigureAwait(false);
 
-                    await httpContext.Response.WriteAsync(string.Empty, httpContext.RequestAborted);
+                    await httpContext.Response.WriteAsync(string.Empty, httpContext.RequestAborted).ConfigureAwait(false);
                     return;
                     #endregion
                 }
@@ -376,7 +376,7 @@ namespace MatriX.API.Engine.Middlewares
                     logAction(info.user.id, "stop - shutdown");
                 }
 
-                await httpContext.Response.WriteAsync("OK", httpContext.RequestAborted);
+                await httpContext.Response.WriteAsync("OK", httpContext.RequestAborted).ConfigureAwait(false);
                 return;
             }
 
@@ -386,9 +386,9 @@ namespace MatriX.API.Engine.Middlewares
             using (var client = httpClientFactory.CreateClient("base"))
             {
                 var request = CreateProxyHttpRequest(httpContext, new Uri(servUri));
-                var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, httpContext.RequestAborted);
+                var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, httpContext.RequestAborted).ConfigureAwait(false);
 
-                await CopyProxyHttpResponse(httpContext, response, info);
+                await CopyProxyHttpResponse(httpContext, response, info).ConfigureAwait(false);
             }
             #endregion
         }
@@ -414,7 +414,7 @@ namespace MatriX.API.Engine.Middlewares
 
                 if (!db.TryAdd(login, info))
                 {
-                    await httpContext.Response.WriteAsync("error: db.TryAdd(dbKeyOrLogin, info)");
+                    await httpContext.Response.WriteAsync("error: db.TryAdd(dbKeyOrLogin, info)").ConfigureAwait(false);
                     return;
                 }
 
@@ -508,8 +508,8 @@ namespace MatriX.API.Engine.Middlewares
                 client.DefaultRequestHeaders.ConnectionClose = false;
                 client.DefaultRequestHeaders.Add("Authorization", Authorization());
 
-                var response = await client.GetAsync($"http://127.0.0.1:{info.port}{httpContext.Request.Path.Value + httpContext.Request.QueryString.Value}", httpContext.RequestAborted);
-                string result = await response.Content.ReadAsStringAsync();
+                var response = await client.GetAsync($"http://127.0.0.1:{info.port}{httpContext.Request.Path.Value + httpContext.Request.QueryString.Value}", httpContext.RequestAborted).ConfigureAwait(false);
+                string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 httpContext.Response.ContentType = "application/json; charset=utf-8";
                 await httpContext.Response.WriteAsync(result, httpContext.RequestAborted).ConfigureAwait(false);
@@ -518,7 +518,7 @@ namespace MatriX.API.Engine.Middlewares
         #endregion
 
         #region CheckPort
-        async public static ValueTask<bool> CheckPort(int port, TorInfo info = null)
+        async public static Task<bool> CheckPort(int port, TorInfo info = null)
         {
             try
             {
@@ -603,7 +603,7 @@ namespace MatriX.API.Engine.Middlewares
         #endregion
 
         #region CopyProxyHttpResponse
-        async ValueTask CopyProxyHttpResponse(HttpContext context, HttpResponseMessage responseMessage, TorInfo info)
+        async Task CopyProxyHttpResponse(HttpContext context, HttpResponseMessage responseMessage, TorInfo info)
         {
             var response = context.Response;
             response.StatusCode = (int)responseMessage.StatusCode;

@@ -111,9 +111,9 @@ namespace MatriX.API.Engine.Middlewares
             using (var client = httpClientFactory.CreateClient("base"))
             {
                 var request = CreateProxyHttpRequest(httpContext, new Uri($"{serip}{httpContext.Request.Path.Value + httpContext.Request.QueryString.Value}"), userData);
-                var response = await client.SendAsync(request, httpContext.RequestAborted);
+                var response = await client.SendAsync(request, httpContext.RequestAborted).ConfigureAwait(false);
 
-                string result = await response.Content.ReadAsStringAsync();
+                string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 httpContext.Response.StatusCode = (int)response.StatusCode;
                 httpContext.Response.ContentLength = response.Content.Headers.ContentLength;
