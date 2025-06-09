@@ -10,6 +10,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Web;
 
 namespace MatriX.API.Engine.Middlewares
 {
@@ -89,6 +90,11 @@ namespace MatriX.API.Engine.Middlewares
 
             memory.Set($"RemoteAPI:{userData._ip}", userData, DateTime.Now.AddHours(5));
 
+            string clearPath = HttpUtility.UrlDecode(httpContext.Request.Path.Value);
+                   clearPath = Regex.Replace(clearPath, "[а-яА-Я]", "z");
+
+            string clearUri = Regex.Replace(clearPath + httpContext.Request.QueryString.Value, @"[^\x00-\x7F]", "");
+
             string serip = serv(userData, memory);
             if (serip.Contains("127.0.0.1"))
             {
@@ -104,13 +110,13 @@ namespace MatriX.API.Engine.Middlewares
 
             if (Regex.IsMatch(httpContext.Request.Path.Value, "^/(stream|playlist|play/)"))
             {
-                httpContext.Response.Redirect($"{serip}{httpContext.Request.Path.Value + httpContext.Request.QueryString.Value}");
+                httpContext.Response.Redirect($"{serip}{clearUri}");
                 return;
             }
 
             using (var client = httpClientFactory.CreateClient("base"))
             {
-                var request = CreateProxyHttpRequest(httpContext, new Uri($"{serip}{httpContext.Request.Path.Value + httpContext.Request.QueryString.Value}"), userData);
+                var request = CreateProxyHttpRequest(httpContext, new Uri($"{serip}{clearUri}"), userData);
                 var response = await client.SendAsync(request, httpContext.RequestAborted).ConfigureAwait(false);
 
                 string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -126,6 +132,12 @@ namespace MatriX.API.Engine.Middlewares
                         try
                         {
                             if (header.Key.ToLower() is "www-authenticate" or "transfer-encoding" or "etag" or "connection" or "content-disposition")
+                                continue;
+
+                            if (Regex.IsMatch(HttpUtility.UrlDecode(header.Key), "[а-яА-Я]") || Regex.IsMatch(HttpUtility.UrlDecode(header.Value.ToString()), "[а-яА-Я]"))
+                                continue;
+
+                            if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
                                 continue;
 
                             httpContext.Response.Headers.TryAdd(header.Key, header.Value.ToArray());
@@ -166,6 +178,9 @@ namespace MatriX.API.Engine.Middlewares
                         if (header.Key.ToLower() is "authorization")
                             continue;
 
+                        if (Regex.IsMatch(HttpUtility.UrlDecode(header.Key), "[а-яА-Я]") || Regex.IsMatch(HttpUtility.UrlDecode(header.Value.ToString()), "[а-яА-Я]"))
+                            continue;
+
                         if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
                             continue;
 
@@ -175,10 +190,14 @@ namespace MatriX.API.Engine.Middlewares
                     catch { }
                 }
             }
-            
+
             requestMessage.Headers.Add("Authorization", "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"{userData.login ?? userData.domainid}:{userData.passwd ?? "ts"}")));
             requestMessage.Headers.Add("X-Client-IP", userData._ip);
             requestMessage.Headers.Add("X-Versionts", userData.versionts ?? "latest");
+            requestMessage.Headers.Add("X-maxSize", userData.maxSize.ToString());
+            requestMessage.Headers.Add("X-maxiptoIsLockHostOrUser", userData.maxiptoIsLockHostOrUser.ToString());
+            requestMessage.Headers.Add("X-allowedToChangeSettings", userData.allowedToChangeSettings.ToString());
+            requestMessage.Headers.Add("X-shared", userData.shared.ToString());
 
             requestMessage.Headers.ConnectionClose = false;
             requestMessage.Headers.Host = uri.Authority;

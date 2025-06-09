@@ -131,9 +131,36 @@ namespace MatriX.API.Engine.Middlewares
                     {
                         if (AppInit.settings.AuthorizationServerAPI == clientIp)
                         {
-                            string xcip = httpContext.Request.Headers["X-Client-IP"].ToString();
-                            string versionts = httpContext.Request.Headers["X-Versionts"].ToString();
-                            httpContext.Features.Set(new UserData() { id = login, login = login, passwd = passwd, _ip = xcip, versionts = versionts, expires = DateTime.Now.AddDays(1) });
+                            long maxSize = 0;
+                            if (httpContext.Request.Headers.ContainsKey("X-maxSize") && long.TryParse(httpContext.Request.Headers["X-maxSize"].ToString(), out long _maxSize))
+                                maxSize = _maxSize;
+
+                            byte maxiptoIsLockHostOrUser = 0;
+                            if (httpContext.Request.Headers.ContainsKey("X-maxiptoIsLockHostOrUser") && byte.TryParse(httpContext.Request.Headers["X-maxiptoIsLockHostOrUser"].ToString(), out byte _maxiptoIsLockHostOrUser))
+                                maxiptoIsLockHostOrUser = _maxiptoIsLockHostOrUser;
+
+                            bool allowedToChangeSettings = true;
+                            if (httpContext.Request.Headers.ContainsKey("X-allowedToChangeSettings") && bool.TryParse(httpContext.Request.Headers["X-allowedToChangeSettings"].ToString(), out bool _allowedToChangeSettings))
+                                allowedToChangeSettings = _allowedToChangeSettings;
+
+                            bool shared = false;
+                            if (httpContext.Request.Headers.ContainsKey("X-shared") && bool.TryParse(httpContext.Request.Headers["X-shared"].ToString(), out bool _shared))
+                                shared = _shared;
+
+                            httpContext.Features.Set(new UserData() 
+                            { 
+                                id = login, 
+                                login = login, 
+                                passwd = passwd, 
+                                _ip = httpContext.Request.Headers["X-Client-IP"].ToString(), 
+                                versionts = httpContext.Request.Headers["X-Versionts"].ToString(), 
+                                maxSize = maxSize,
+                                maxiptoIsLockHostOrUser = maxiptoIsLockHostOrUser,
+                                allowedToChangeSettings = allowedToChangeSettings,
+                                shared = shared,
+                                expires = DateTime.Now.AddDays(1) 
+                            });
+
                             return _next(httpContext);
                         }
                         else if (!string.IsNullOrEmpty(AppInit.settings.AuthorizationServerAPI))

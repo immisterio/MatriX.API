@@ -1,21 +1,22 @@
 ﻿using MatriX.API.Models;
 using Microsoft.AspNetCore.Http;
-using System.Threading.Tasks;
-using System.Collections.Concurrent;
-using System.IO;
-using System;
-using System.Threading;
-using System.Diagnostics;
-using System.Net.Http;
-using System.Text.RegularExpressions;
-using System.Net.Http.Headers;
-using System.Text;
 using Microsoft.Extensions.Caching.Memory;
+using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Net.Sockets;
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Net.Sockets;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
 
 namespace MatriX.API.Engine.Middlewares
 {
@@ -160,7 +161,7 @@ namespace MatriX.API.Engine.Middlewares
                 #endregion
 
                 info.port = NextPort();
-                while(IsPortInUse(info.port))
+                while (IsPortInUse(info.port))
                     info.port = NextPort();
 
                 #region Создаем папку пользователя
@@ -259,8 +260,8 @@ namespace MatriX.API.Engine.Middlewares
                             info.exception = "process == null";
                         }
                     }
-                    catch (Exception ex) 
-                    { 
+                    catch (Exception ex)
+                    {
                         info.exception = ex.ToString();
 
                         try
@@ -381,7 +382,10 @@ namespace MatriX.API.Engine.Middlewares
             }
 
             #region Отправляем запрос в torrserver
-            string servUri = $"http://127.0.0.1:{info.port}{Regex.Replace(httpContext.Request.Path.Value + httpContext.Request.QueryString.Value, @"[^\x00-\x7F]", "")}";
+            string clearPath = HttpUtility.UrlDecode(httpContext.Request.Path.Value);
+                   clearPath = Regex.Replace(clearPath, "[а-яА-Я]", "z");
+
+            string servUri = $"http://127.0.0.1:{info.port}{Regex.Replace(clearPath + httpContext.Request.QueryString.Value, @"[^\x00-\x7F]", "")}";
 
             using (var client = httpClientFactory.CreateClient("base"))
             {
@@ -539,7 +543,7 @@ namespace MatriX.API.Engine.Middlewares
                             client.Timeout = TimeSpan.FromSeconds(1);
 
                             var response = await client.GetAsync($"http://127.0.0.1:{port}/echo");
-                            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                            if (response.StatusCode == HttpStatusCode.OK)
                             {
                                 string echo = await response.Content.ReadAsStringAsync();
                                 if (echo.StartsWith("MatriX."))
@@ -583,6 +587,9 @@ namespace MatriX.API.Engine.Middlewares
                     if (header.Key.ToLower() is "authorization")
                         continue;
 
+                    if (Regex.IsMatch(HttpUtility.UrlDecode(header.Key), "[а-яА-Я]") || Regex.IsMatch(HttpUtility.UrlDecode(header.Value.ToString()), "[а-яА-Я]"))
+                        continue;
+
                     if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
                         continue;
 
@@ -617,6 +624,9 @@ namespace MatriX.API.Engine.Middlewares
                     try
                     {
                         if (header.Key.ToLower() is "www-authenticate" or "transfer-encoding" or "etag" or "connection" or "content-disposition")
+                            continue;
+
+                        if (Regex.IsMatch(HttpUtility.UrlDecode(header.Key), "[а-яА-Я]") || Regex.IsMatch(HttpUtility.UrlDecode(header.Value.ToString()), "[а-яА-Я]"))
                             continue;
 
                         if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
