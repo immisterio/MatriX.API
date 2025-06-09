@@ -104,10 +104,13 @@ namespace MatriX.API.Controllers
 					if (!server.enable || server.reserve || server.group != userData.group)
 						continue;
 
-                    string _checked = server.host == userData.server ? "checked" : "";
-					string _status = server.status == 1 ? "<b style=\"color: green;\">work</b>" : "<b style=\"color: crimson;\">shutdown</b>";
+					if (server.group == userData.group || (server.groups != null && server.groups.Contains(userData.group)))
+					{
+						string _checked = server.host == userData.server ? "checked" : "";
+						string _status = server.status == 1 ? "<b style=\"color: green;\">work</b>" : "<b style=\"color: crimson;\">shutdown</b>";
 
-                    html_servers += $"<div class=\"flex\"><input type=\"radio\" name=\"server\" value=\"{server.host}\" {_checked} /> {server.name}&nbsp; - &nbsp;{_status}</div>";
+						html_servers += $"<div class=\"flex\"><input type=\"radio\" name=\"server\" value=\"{server.host}\" {_checked} /> {server.name}&nbsp; - &nbsp;{_status}</div>";
+					}
 				}
 			}
             #endregion

@@ -53,6 +53,35 @@ namespace MatriX.API.Controllers
         [Route("xrealip")]
         public string XRealIP() => HttpContext.Connection.RemoteIpAddress.ToString();
 
+        [Route("userdata")]
+        public JsonResult GoUserData() 
+        {
+            var u = HttpContext.Features.Get<UserData>();
+            memoryCache.TryGetValue($"memKeyLocIP:{u.id}:{DateTime.Now.Hour}", out HashSet<string> ips);
+
+            return Json (new
+            {
+                u.id,
+                ip = u._ip,
+                ips,
+                server = string.IsNullOrEmpty(u.server) ? "auto" : AppInit.settings.servers.FirstOrDefault(i => i.host != null && i.host.StartsWith(u.server))?.name ?? "auto",
+                u.maxiptoIsLockHostOrUser,
+                u.domainid,
+                u.login,
+                u.passwd,
+                u.admin,
+                u.group,
+                u.versionts,
+                u.default_settings,
+                u.allowedToChangeSettings,
+                u.shutdown,
+                u.shared,
+                u.maxSize,
+                u.whiteip,
+                u.expires
+            });
+        }
+
         [Route("headers")]
         public ActionResult Headers() => Json(HttpContext.Request.Headers);
     }

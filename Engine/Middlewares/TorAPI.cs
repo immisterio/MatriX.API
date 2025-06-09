@@ -122,7 +122,7 @@ namespace MatriX.API.Engine.Middlewares
             }
 
             var userData = httpContext.Features.Get<UserData>();
-            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control"))
+            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
             {
                 await _next(httpContext);
                 return;
@@ -538,14 +538,14 @@ namespace MatriX.API.Engine.Middlewares
 
                         await Task.Delay(50).ConfigureAwait(false);
 
-                        using (HttpClient client = new HttpClient())
+                        using (HttpClient client = Startup.httpClientFactory != default ? Startup.httpClientFactory.CreateClient("base") : new HttpClient())
                         {
                             client.Timeout = TimeSpan.FromSeconds(1);
 
-                            var response = await client.GetAsync($"http://127.0.0.1:{port}/echo");
+                            var response = await client.GetAsync($"http://127.0.0.1:{port}/echo").ConfigureAwait(false);
                             if (response.StatusCode == HttpStatusCode.OK)
                             {
-                                string echo = await response.Content.ReadAsStringAsync();
+                                string echo = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                                 if (echo.StartsWith("MatriX."))
                                 {
                                     servIsWork = true;

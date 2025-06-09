@@ -35,7 +35,10 @@ namespace MatriX.API.Engine.Middlewares
 
             string clientIp = httpContext.Connection.RemoteIpAddress.ToString();
 
-            if (clientIp == "127.0.0.1" || httpContext.Request.Path.Value.StartsWith("/top") || httpContext.Request.Path.Value.StartsWith("/xrealip") || httpContext.Request.Path.Value.StartsWith("/headers"))
+            if (clientIp == "127.0.0.1" || 
+                httpContext.Request.Path.Value.StartsWith("/top") || 
+                httpContext.Request.Path.Value.StartsWith("/xrealip") || 
+                httpContext.Request.Path.Value.StartsWith("/headers"))
             {
                 httpContext.Features.Set(new UserData()
                 {
@@ -47,7 +50,7 @@ namespace MatriX.API.Engine.Middlewares
             #endregion
 
             #region Авторизация по домену
-            if (!string.IsNullOrEmpty(AppInit.settings.domainid_pattern))
+            if (!string.IsNullOrEmpty(AppInit.settings.domainid_pattern) && AppInit.settings.AuthorizationServerAPI != clientIp)
             {
                 string domainid = Regex.Match(httpContext.Request.Host.Value, AppInit.settings.domainid_pattern).Groups[1].Value;
 
@@ -78,6 +81,9 @@ namespace MatriX.API.Engine.Middlewares
 
                     if (AppInit.settings.UserNotFoundToError)
                     {
+                        if (httpContext.Request.Path.Value.StartsWith("/echo"))
+                            return httpContext.Response.WriteAsync("MatriX.API");
+
                         httpContext.Response.StatusCode = 403;
                         httpContext.Response.ContentType = "text/plain; charset=utf-8";
                         return httpContext.Response.WriteAsync(AppInit.settings.UserNotFoundToMessage);

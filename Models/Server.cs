@@ -6,6 +6,8 @@
 
         public int group { get; set; }
 
+        public int[] groups { get; set; }
+
         public bool reserve { get; set; }
 
         public int[] workinghours { get; set; }

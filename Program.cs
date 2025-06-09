@@ -108,7 +108,7 @@ namespace MatriX.API
 
                 while (true)
                 {
-                    await Task.Delay(firstwhile ? TimeSpan.FromSeconds(5) : TimeSpan.FromMinutes(1));
+                    await Task.Delay(firstwhile ? TimeSpan.FromSeconds(5) : TimeSpan.FromMinutes(1)).ConfigureAwait(false);
                     firstwhile = false;
 
                     try
@@ -127,14 +127,14 @@ namespace MatriX.API
                                 continue;
                             }
 
-                            using (HttpClient client = new HttpClient())
+                            using (HttpClient client = Startup.httpClientFactory != default ? Startup.httpClientFactory.CreateClient("base") : new HttpClient())
                             {
                                 client.Timeout = TimeSpan.FromSeconds(10);
 
-                                var response = await client.GetAsync($"{server.host}/echo");
+                                var response = await client.GetAsync($"{server.host}/echo").ConfigureAwait(false);
                                 if (response.StatusCode == HttpStatusCode.OK)
                                 {
-                                    string echo = await response.Content.ReadAsStringAsync();
+                                    string echo = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                                     server.status = echo.StartsWith("MatriX.") ? 1 : 2;
 
                                     if (server.status == 1 && server.limit != null)
@@ -142,7 +142,7 @@ namespace MatriX.API
                                         try
                                         {
                                             response = await client.GetAsync($"{server.host}/top");
-                                            string top = await response.Content.ReadAsStringAsync();
+                                            string top = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                                             if (top == null || !top.Contains("mem:"))
                                                 continue;

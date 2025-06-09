@@ -1,15 +1,18 @@
+using MatriX.API.Engine.Middlewares;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using System.Text.Json.Serialization;
-using MatriX.API.Engine.Middlewares;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http;
+using System.Text.Json.Serialization;
 using System.Threading;
 
 namespace MatriX.API
 {
     public class Startup
     {
+        public static IHttpClientFactory httpClientFactory = default;
+
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddHttpClient("base").ConfigurePrimaryHttpMessageHandler(() =>
@@ -30,9 +33,10 @@ namespace MatriX.API
             });
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IHttpClientFactory _httpClientFactory)
         {
             app.UseDeveloperExceptionPage();
+            httpClientFactory = _httpClientFactory;
 
             #region IP клиента
             var forwarded = new ForwardedHeadersOptions

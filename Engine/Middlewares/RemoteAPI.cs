@@ -25,7 +25,12 @@ namespace MatriX.API.Engine.Middlewares
 
         public static string serv(UserData userData, IMemoryCache mem)
         {
-            Server[] working_servers = AppInit.settings.servers?.Where(i => i.enable && i.group == userData.group && i.status == 1 && (i.workinghours == null || i.workinghours.Contains(DateTime.UtcNow.Hour)))?.ToArray();
+            Server[] working_servers = AppInit.settings.servers?.Where(i => 
+                i.enable && 
+                (i.group == userData.group || (i.groups != null && i.groups.Contains(userData.group))) && 
+                i.status == 1 && 
+                (i.workinghours == null || i.workinghours.Contains(DateTime.UtcNow.Hour))
+            )?.ToArray();
 
             if (working_servers == null || working_servers.Length == 0)
             {
@@ -75,7 +80,7 @@ namespace MatriX.API.Engine.Middlewares
         {
             #region search / torinfo / control
             var userData = httpContext.Features.Get<UserData>();
-            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control"))
+            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
             {
                 await _next(httpContext);
                 return;

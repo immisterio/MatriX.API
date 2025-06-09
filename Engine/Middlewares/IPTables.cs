@@ -66,7 +66,7 @@ namespace MatriX.API.Engine.Middlewares
         public Task InvokeAsync(HttpContext httpContext)
         {
             var userData = httpContext.Features.Get<UserData>();
-            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control"))
+            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
                 return _next(httpContext);
 
             if (userData.expires != default && DateTime.Now > userData.expires)
@@ -80,7 +80,7 @@ namespace MatriX.API.Engine.Middlewares
             {
                 httpContext.Response.StatusCode = 403;
                 httpContext.Response.ContentType = "text/plain; charset=UTF-8";
-                return httpContext.Response.WriteAsync("Доступ запрещен, причина: group", httpContext.RequestAborted);
+                return httpContext.Response.WriteAsync($"Доступ запрещен, причина: group {AppInit.settings.group} > {userData.group}", httpContext.RequestAborted);
             }
 
             if (IsLockHostOrUser(userData, out HashSet<string> ips))
