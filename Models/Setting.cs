@@ -8,6 +8,8 @@ namespace MatriX.API.Models
 
         public bool IPAddressAny { get; set; } = true;
 
+        public int group { get; set; }
+
         public bool onlyRemoteApi { get; set; }
 
         public List<Server> servers { get; set; }

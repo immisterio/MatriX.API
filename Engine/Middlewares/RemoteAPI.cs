@@ -25,7 +25,7 @@ namespace MatriX.API.Engine.Middlewares
 
         public static string serv(UserData userData, IMemoryCache mem)
         {
-            Server[] working_servers = AppInit.settings.servers?.Where(i => i.enable && i.status == 1 && (i.workinghours == null || i.workinghours.Contains(DateTime.UtcNow.Hour)))?.ToArray();
+            Server[] working_servers = AppInit.settings.servers?.Where(i => i.enable && i.group == userData.group && i.status == 1 && (i.workinghours == null || i.workinghours.Contains(DateTime.UtcNow.Hour)))?.ToArray();
 
             if (working_servers == null || working_servers.Length == 0)
             {
@@ -192,12 +192,13 @@ namespace MatriX.API.Engine.Middlewares
             }
 
             requestMessage.Headers.Add("Authorization", "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"{userData.login ?? userData.domainid}:{userData.passwd ?? "ts"}")));
+            requestMessage.Headers.Add("X-group", userData.group.ToString());
+            requestMessage.Headers.Add("X-shared", userData.shared.ToString());
             requestMessage.Headers.Add("X-Client-IP", userData._ip);
             requestMessage.Headers.Add("X-Versionts", userData.versionts ?? "latest");
             requestMessage.Headers.Add("X-maxSize", userData.maxSize.ToString());
             requestMessage.Headers.Add("X-maxiptoIsLockHostOrUser", userData.maxiptoIsLockHostOrUser.ToString());
             requestMessage.Headers.Add("X-allowedToChangeSettings", userData.allowedToChangeSettings.ToString());
-            requestMessage.Headers.Add("X-shared", userData.shared.ToString());
 
             requestMessage.Headers.ConnectionClose = false;
             requestMessage.Headers.Host = uri.Authority;

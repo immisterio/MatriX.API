@@ -15,6 +15,8 @@ namespace MatriX.API.Models
 
         public bool admin { get; set; }
 
+        public int group { get; set; }
+
         public string versionts { get; set; }
 
         public string default_settings { get; set; } = "default_settings.json";

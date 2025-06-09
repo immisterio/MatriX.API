@@ -101,7 +101,7 @@ namespace MatriX.API.Controllers
 			{
 				foreach (var server in AppInit.settings.servers)
                 {
-					if (!server.enable || server.reserve)
+					if (!server.enable || server.reserve || server.group != userData.group)
 						continue;
 
                     string _checked = server.host == userData.server ? "checked" : "";

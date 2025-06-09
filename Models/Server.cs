@@ -4,6 +4,8 @@
     {
         public bool enable { get; set; }
 
+        public int group { get; set; }
+
         public bool reserve { get; set; }
 
         public int[] workinghours { get; set; }

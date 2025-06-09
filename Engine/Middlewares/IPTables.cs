@@ -73,14 +73,21 @@ namespace MatriX.API.Engine.Middlewares
             {
                 httpContext.Response.StatusCode = 403;
                 httpContext.Response.ContentType = "text/plain; charset=UTF-8";
-                return httpContext.Response.WriteAsync("Доступ запрещен, причина: дата");
+                return httpContext.Response.WriteAsync("Доступ запрещен, причина: дата", httpContext.RequestAborted);
+            }
+
+            if (AppInit.settings.group > 0 && AppInit.settings.group > userData.group)
+            {
+                httpContext.Response.StatusCode = 403;
+                httpContext.Response.ContentType = "text/plain; charset=UTF-8";
+                return httpContext.Response.WriteAsync("Доступ запрещен, причина: group", httpContext.RequestAborted);
             }
 
             if (IsLockHostOrUser(userData, out HashSet<string> ips))
             {
                 httpContext.Response.StatusCode = 403;
                 httpContext.Response.ContentType = "text/plain; charset=UTF-8";
-                return httpContext.Response.WriteAsync($"Превышено допустимое количество ip. Разбан через {60 - DateTime.Now.Minute} мин.\n\n" + string.Join(", ", ips));
+                return httpContext.Response.WriteAsync($"Превышено допустимое количество ip. Разбан через {60 - DateTime.Now.Minute} мин.\n\n" + string.Join(", ", ips), httpContext.RequestAborted);
             }
 
             if (userData.whiteip != null && userData.whiteip.Count > 0)
@@ -105,7 +112,7 @@ namespace MatriX.API.Engine.Middlewares
 
                 httpContext.Response.StatusCode = 403;
                 httpContext.Response.ContentType = "text/plain; charset=UTF-8";
-                return httpContext.Response.WriteAsync($"IP {clientIP} отсутствует в списке разрешенных");
+                return httpContext.Response.WriteAsync($"IP {clientIP} отсутствует в списке разрешенных", httpContext.RequestAborted);
             }
 
             return _next(httpContext);

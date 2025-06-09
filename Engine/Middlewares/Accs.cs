@@ -147,6 +147,10 @@ namespace MatriX.API.Engine.Middlewares
                             if (httpContext.Request.Headers.ContainsKey("X-shared") && bool.TryParse(httpContext.Request.Headers["X-shared"].ToString(), out bool _shared))
                                 shared = _shared;
 
+                            int group = 0;
+                            if (httpContext.Request.Headers.ContainsKey("X-group") && int.TryParse(httpContext.Request.Headers["X-group"].ToString(), out int _group))
+                                group = _group;
+
                             httpContext.Features.Set(new UserData() 
                             { 
                                 id = login, 
@@ -158,6 +162,7 @@ namespace MatriX.API.Engine.Middlewares
                                 maxiptoIsLockHostOrUser = maxiptoIsLockHostOrUser,
                                 allowedToChangeSettings = allowedToChangeSettings,
                                 shared = shared,
+                                group = group,
                                 expires = DateTime.Now.AddDays(1) 
                             });
 
