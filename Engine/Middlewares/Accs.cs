@@ -50,43 +50,46 @@ namespace MatriX.API.Engine.Middlewares
             #endregion
 
             #region Авторизация по домену
-            if (!string.IsNullOrEmpty(AppInit.settings.domainid_pattern) && AppInit.settings.AuthorizationServerAPI != clientIp)
+            if (!string.IsNullOrEmpty(AppInit.settings.domainid_pattern))
             {
-                string domainid = Regex.Match(httpContext.Request.Host.Value, AppInit.settings.domainid_pattern).Groups[1].Value;
-
-                if (!string.IsNullOrWhiteSpace(domainid))
+                if (httpContext.Request.Host.Value != AppInit.settings.domainid_api && AppInit.settings.AuthorizationServerAPI != clientIp)
                 {
-                    if (AppInit.usersDb.FirstOrDefault(i => i.domainid == domainid) is UserData _domainUser)
-                    {
-                        if (_domainUser.shared)
-                        {
-                            var ushared = _domainUser.Clone();
-                            ushared._ip = clientIp;
-                            ushared.id = $"{domainid}/{clientIp.Replace(":", "_")}";
+                    string domainid = Regex.Match(httpContext.Request.Host.Value, AppInit.settings.domainid_pattern).Groups[1].Value;
 
-                            httpContext.Features.Set(ushared);
+                    if (!string.IsNullOrWhiteSpace(domainid))
+                    {
+                        if (AppInit.usersDb.FirstOrDefault(i => i.domainid == domainid) is UserData _domainUser)
+                        {
+                            if (_domainUser.shared)
+                            {
+                                var ushared = _domainUser.Clone();
+                                ushared._ip = clientIp;
+                                ushared.id = $"{domainid}/{clientIp.Replace(":", "_")}";
+
+                                httpContext.Features.Set(ushared);
+                                return _next(httpContext);
+                            }
+
+                            _domainUser._ip = clientIp;
+                            _domainUser.id = domainid;
+                            httpContext.Features.Set(_domainUser);
+                            return _next(httpContext);
+                        }
+                        else if (AppInit.settings.AuthorizationRequired == false)
+                        {
+                            httpContext.Features.Set(new UserData() { id = domainid, login = domainid, passwd = "ts", _ip = clientIp, expires = DateTime.Now.AddDays(1) });
                             return _next(httpContext);
                         }
 
-                        _domainUser._ip = clientIp;
-                        _domainUser.id = domainid;
-                        httpContext.Features.Set(_domainUser);
-                        return _next(httpContext);
-                    }
-                    else if (AppInit.settings.AuthorizationRequired == false)
-                    {
-                        httpContext.Features.Set(new UserData() { id = domainid, login = domainid, passwd = "ts", _ip = clientIp, expires = DateTime.Now.AddDays(1) });
-                        return _next(httpContext);
-                    }
+                        if (AppInit.settings.UserNotFoundToError)
+                        {
+                            if (httpContext.Request.Path.Value.StartsWith("/echo"))
+                                return httpContext.Response.WriteAsync("MatriX.API");
 
-                    if (AppInit.settings.UserNotFoundToError)
-                    {
-                        if (httpContext.Request.Path.Value.StartsWith("/echo"))
-                            return httpContext.Response.WriteAsync("MatriX.API");
-
-                        httpContext.Response.StatusCode = 403;
-                        httpContext.Response.ContentType = "text/plain; charset=utf-8";
-                        return httpContext.Response.WriteAsync(AppInit.settings.UserNotFoundToMessage);
+                            httpContext.Response.StatusCode = 403;
+                            httpContext.Response.ContentType = "text/plain; charset=utf-8";
+                            return httpContext.Response.WriteAsync(AppInit.settings.UserNotFoundToMessage);
+                        }
                     }
                 }
             }

@@ -24,6 +24,8 @@ namespace MatriX.API.Models
 
         public string domainid_pattern { get; set; } = "^([^\\.]{8})\\.";
 
+        public string domainid_api { get; set; }
+
         public bool UserNotFoundToError { get; set; } = true;
 
         public string UserNotFoundToMessage { get; set; } = "user not found";

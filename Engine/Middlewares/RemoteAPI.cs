@@ -139,9 +139,6 @@ namespace MatriX.API.Engine.Middlewares
                             if (header.Key.ToLower() is "www-authenticate" or "transfer-encoding" or "etag" or "connection" or "content-disposition")
                                 continue;
 
-                            if (Regex.IsMatch(HttpUtility.UrlDecode(header.Key), "[а-яА-Я]") || Regex.IsMatch(HttpUtility.UrlDecode(header.Value.ToString()), "[а-яА-Я]"))
-                                continue;
-
                             if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
                                 continue;
 
@@ -181,9 +178,6 @@ namespace MatriX.API.Engine.Middlewares
                     try
                     {
                         if (header.Key.ToLower() is "authorization")
-                            continue;
-
-                        if (Regex.IsMatch(HttpUtility.UrlDecode(header.Key), "[а-яА-Я]") || Regex.IsMatch(HttpUtility.UrlDecode(header.Value.ToString()), "[а-яА-Я]"))
                             continue;
 
                         if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
