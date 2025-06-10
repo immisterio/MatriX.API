@@ -34,6 +34,8 @@ namespace MatriX.API.Models
 
         public string AuthorizationServerAPI { get; set; }
 
+        public string defaultPasswd { get; set; } = "ts";
+
         public HashSet<Known> KnownProxies { get; set; } = new HashSet<Known>();
     }
 }

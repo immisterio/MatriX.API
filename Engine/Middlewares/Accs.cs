@@ -179,7 +179,7 @@ namespace MatriX.API.Engine.Middlewares
                         }
                         else
                         {
-                            if (AppInit.usersDb.FirstOrDefault(i => i.login == login) is UserData _u && _u.passwd == passwd)
+                            if (AppInit.usersDb.FirstOrDefault(i => i.login == login || i.domainid == login) is UserData _u && passwd == (_u.passwd ?? AppInit.settings.defaultPasswd))
                             {
                                 if (_u.shared)
                                 {
