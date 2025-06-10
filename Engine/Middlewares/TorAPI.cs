@@ -512,7 +512,8 @@ namespace MatriX.API.Engine.Middlewares
                 client.DefaultRequestHeaders.ConnectionClose = false;
                 client.DefaultRequestHeaders.Add("Authorization", Authorization());
 
-                var response = await client.GetAsync($"http://127.0.0.1:{info.port}{httpContext.Request.Path.Value + httpContext.Request.QueryString.Value}", httpContext.RequestAborted).ConfigureAwait(false);
+                
+                var response = await client.GetAsync($"http://127.0.0.1:{info.port}{"/search/" + httpContext.Request.QueryString.Value}", httpContext.RequestAborted).ConfigureAwait(false);
                 string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 httpContext.Response.ContentType = "application/json; charset=utf-8";

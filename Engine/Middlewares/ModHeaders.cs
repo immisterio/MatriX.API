@@ -28,7 +28,12 @@ namespace MatriX.API.Engine.Middlewares
             httpContext.Response.Headers.Append("MatriX-API", "https://github.com/immisterio/MatriX.API");
 
             if (HttpMethods.IsOptions(httpContext.Request.Method))
+            {
+                if (httpContext.Request.Headers.TryGetValue("Access-Control-Request-Headers", out var AccessControl) && AccessControl == "authorization")
+                    httpContext.Response.StatusCode = 204;
+
                 return Task.CompletedTask;
+            }
 
             return _next(httpContext);
         }

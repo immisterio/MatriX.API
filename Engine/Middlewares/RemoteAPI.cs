@@ -86,9 +86,15 @@ namespace MatriX.API.Engine.Middlewares
                 return;
             }
 
-            if (httpContext.Request.Path.Value.StartsWith("/search") && !AppInit.settings.onlyRemoteApi)
+            if (httpContext.Request.Path.Value.StartsWith("/search"))
             {
-                await _next(httpContext);
+                if (AppInit.settings.onlyRemoteApi == false || AppInit.settings.allowSearchOnlyRemoteApi)
+                {
+                    await _next(httpContext);
+                    return;
+                }
+
+                await httpContext.Response.WriteAsync("search disabled", httpContext.RequestAborted).ConfigureAwait(false);
                 return;
             }
             #endregion
@@ -113,7 +119,7 @@ namespace MatriX.API.Engine.Middlewares
                 return;
             }
 
-            if (Regex.IsMatch(httpContext.Request.Path.Value, "^/(stream|playlist|play/)"))
+            if (Regex.IsMatch(httpContext.Request.Path.Value, "^/(stream|playlist|play/|download/)"))
             {
                 httpContext.Response.Redirect($"{serip}{clearUri}");
                 return;

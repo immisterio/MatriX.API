@@ -12,6 +12,8 @@ namespace MatriX.API.Models
 
         public bool onlyRemoteApi { get; set; }
 
+        public bool allowSearchOnlyRemoteApi { get; set; }
+
         public List<Server> servers { get; set; }
 
         public string interface_network { get; set; } = "eth0";

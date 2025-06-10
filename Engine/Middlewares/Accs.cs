@@ -1,12 +1,12 @@
 ﻿using MatriX.API.Models;
 using Microsoft.AspNetCore.Http;
-using System;
-using System.Text;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Caching.Memory;
+using System;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace MatriX.API.Engine.Middlewares
 {
@@ -23,6 +23,20 @@ namespace MatriX.API.Engine.Middlewares
             this.memory = memory;
         }
         #endregion
+
+        Task goDefaultRefault(HttpContext httpContext)
+        {
+            httpContext.Features.Set(new UserData()
+            {
+                id = "default",
+                login = "default",
+                passwd = "default",
+                _ip = "127.0.0.1",
+                expires = DateTime.Now.AddDays(1)
+            });
+
+            return _next(httpContext);
+        }
 
         public Task Invoke(HttpContext httpContext)
         {
@@ -83,6 +97,9 @@ namespace MatriX.API.Engine.Middlewares
 
                         if (AppInit.settings.UserNotFoundToError)
                         {
+                            if (httpContext.Request.Path.Value.StartsWith("/download/"))
+                                return goDefaultRefault(httpContext);
+
                             if (httpContext.Request.Path.Value.StartsWith("/echo"))
                                 return httpContext.Response.WriteAsync("MatriX.API");
 
@@ -115,14 +132,6 @@ namespace MatriX.API.Engine.Middlewares
                     httpContext.Response.StatusCode = 404;
                     return Task.CompletedTask;
                 }
-            }
-            #endregion
-
-            #region Access-Control-Request-Headers
-            if (httpContext.Request.Method == "OPTIONS" && httpContext.Request.Headers.TryGetValue("Access-Control-Request-Headers", out var AccessControl) && AccessControl == "authorization")
-            {
-                httpContext.Response.StatusCode = 204;
-                return Task.CompletedTask;
             }
             #endregion
 
@@ -210,6 +219,9 @@ namespace MatriX.API.Engine.Middlewares
                 }
                 catch { }
             }
+
+            if (httpContext.Request.Path.Value.StartsWith("/download/"))
+                return goDefaultRefault(httpContext);
 
             if (httpContext.Request.Path.Value.StartsWith("/echo"))
                 return httpContext.Response.WriteAsync("MatriX.API");
