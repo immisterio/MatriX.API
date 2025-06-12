@@ -159,7 +159,7 @@ namespace MatriX.API.Controllers
                     TorAPI.db.TryRemove(userData.id, out _);
                 }
 
-				if (reload && !string.IsNullOrEmpty(userData.server) && !RemoteAPI.serv(userData, null).Contains("127.0.0.1"))
+				if (reload && !string.IsNullOrEmpty(userData.server) && !RemoteAPI.serv(userData, null, false).Contains("127.0.0.1"))
 				{
                     using (var client = new HttpClient())
                     {

@@ -23,49 +23,58 @@ namespace MatriX.API.Engine.Middlewares
 
         IHttpClientFactory httpClientFactory;
 
-        public static string serv(UserData userData, IMemoryCache mem)
-        {
-            Server[] working_servers = AppInit.settings.servers?.Where(i => 
-                i.enable && 
-                (i.group == userData.group || (i.groups != null && i.groups.Contains(userData.group))) && 
-                i.status == 1 && 
-                (i.workinghours == null || i.workinghours.Contains(DateTime.UtcNow.Hour))
-            )?.ToArray();
+        static readonly object lockObj = typeof(RemoteAPI);
 
-            if (working_servers == null || working_servers.Length == 0)
+        public static string serv(UserData userData, IMemoryCache mem, bool isStream)
+        {
+            lock (lockObj)
             {
-                // рабочие сервера у которых workinghours не совпадает с текущим Hour
-                // Hour 16-18 / workinghours 19-24
-                working_servers = AppInit.settings.servers?.Where(i => i.enable && i.status == 1 && i.workinghours != null && !i.workinghours.Contains(DateTime.UtcNow.Hour))?.ToArray();
+                Server[] working_servers = AppInit.settings.servers?.Where(i =>
+                    i.enable &&
+                    (i.group == userData.group || (i.groups != null && i.groups.Contains(userData.group))) &&
+                    i.status == 1 &&
+                    (i.workinghours == null || i.workinghours.Contains(DateTime.UtcNow.Hour))
+                )?.ToArray();
+
                 if (working_servers == null || working_servers.Length == 0)
                 {
-                    // резерв на случай перегрузки основных серверов
-                    working_servers = AppInit.settings.servers?.Where(i => i.enable && i.status == 1 && i.reserve)?.ToArray();
+                    // рабочие сервера у которых workinghours не совпадает с текущим Hour
+                    working_servers = AppInit.settings.servers?.Where(i => i.enable && i.status == 1 && i.workinghours != null && !i.workinghours.Contains(DateTime.UtcNow.Hour))?.ToArray();
                     if (working_servers == null || working_servers.Length == 0)
-                        return "http://127.0.0.1";
-                }    
-            }
+                    {
+                        // резерв на случай перегрузки основных серверов
+                        working_servers = AppInit.settings.servers?.Where(i => i.enable && i.status == 1 && i.reserve)?.ToArray();
+                        if (working_servers == null || working_servers.Length == 0)
+                            return "http://127.0.0.1";
+                    }
+                }
 
-            if (!string.IsNullOrEmpty(userData.server))
-            {
-                if (working_servers.FirstOrDefault(i => i.host == userData.server) != null)
-                    return userData.server;
-            }
+                if (!string.IsNullOrEmpty(userData.server))
+                {
+                    if (working_servers.FirstOrDefault(i => i.host == userData.server) != null)
+                        return userData.server;
+                }
 
-            string server = working_servers[Random.Shared.Next(0, working_servers.Length)].host;
-            if (mem == null)
+                string server = working_servers[Random.Shared.Next(0, working_servers.Length)].host;
+                if (mem == null)
+                    return server;
+
+                string mkey = $"RemoteAPI:serv:{userData.id}";
+                if (mem.TryGetValue(mkey, out string _serv))
+                {
+                    if (isStream)
+                        return _serv;
+
+                    if (AppInit.settings.servers.FirstOrDefault(i => i.enable && i.status != 2 && i.host == _serv) != null)
+                    {
+                        mem.Set(mkey, _serv, DateTime.Now.AddHours(4));
+                        return _serv;
+                    }
+                }
+
+                mem.Set(mkey, server, DateTime.Now.AddHours(4));
                 return server;
-
-            string mkey = $"RemoteAPI:serv:{userData.id}";
-            if (mem.TryGetValue(mkey, out string _serv) && AppInit.settings.servers.FirstOrDefault(i => i.enable && i.status != 2 && i.host == _serv) != null)
-            {
-                mem.Set(mkey, _serv, DateTime.Now.AddHours(4));
-                return _serv;
             }
-
-            mem.Set(mkey, server, DateTime.Now.AddHours(4));
-
-            return server;
         }
 
         public RemoteAPI(RequestDelegate next, IMemoryCache memory, IHttpClientFactory httpClientFactory)
@@ -99,14 +108,11 @@ namespace MatriX.API.Engine.Middlewares
             }
             #endregion
 
-            memory.Set($"RemoteAPI:{userData._ip}", userData, DateTime.Now.AddHours(5));
+            memory.Set($"RemoteAPI:{userData._ip}", userData, DateTime.Now.AddDays(1));
 
-            string clearPath = HttpUtility.UrlDecode(httpContext.Request.Path.Value);
-                   clearPath = Regex.Replace(clearPath, "[а-яА-Я]", "z");
+            bool isStream = Regex.IsMatch(httpContext.Request.Path.Value, "^/(stream|playlist|play/|download/)");
 
-            string clearUri = Regex.Replace(clearPath + httpContext.Request.QueryString.Value, @"[^\x00-\x7F]", "");
-
-            string serip = serv(userData, memory);
+            string serip = serv(userData, memory, isStream);
             if (serip.Contains("127.0.0.1"))
             {
                 if (AppInit.settings.onlyRemoteApi)
@@ -119,10 +125,19 @@ namespace MatriX.API.Engine.Middlewares
                 return;
             }
 
-            if (Regex.IsMatch(httpContext.Request.Path.Value, "^/(stream|playlist|play/|download/)"))
+            string clearPath = HttpUtility.UrlDecode(httpContext.Request.Path.Value);
+            clearPath = Regex.Replace(clearPath, "[а-яА-Я]", "z");
+
+            string clearUri = Regex.Replace(clearPath + httpContext.Request.QueryString.Value, @"[^\x00-\x7F]", "");
+
+            if (isStream)
             {
-                httpContext.Response.Redirect($"{serip}{clearUri}");
-                return;
+                if (httpContext.Request.Path.Value.StartsWith("/stream/") && Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|stat|m3u)(&|$)")) { }
+                else
+                {
+                    httpContext.Response.Redirect($"{serip}{clearUri}");
+                    return;
+                }
             }
 
             using (var client = httpClientFactory.CreateClient("base"))
