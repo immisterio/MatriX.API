@@ -115,22 +115,23 @@ namespace MatriX.API.Engine.Middlewares
             #region Обработка stream потока и msx
             if (httpContext.Request.Method == "GET" && Regex.IsMatch(httpContext.Request.Path.Value, "^/(stream|playlist|play/|msx/)"))
             {
-                if (TorAPI.db.LastOrDefault(i => i.Value.clientIps.Contains(clientIp)).Value is TorInfo info)
+                if (AppInit.settings.AuthorizationServerAPI != clientIp)
                 {
-                    httpContext.Features.Set(info.user);
-                    return _next(httpContext);
-                }
-                else if (memory.TryGetValue($"RemoteAPI:{clientIp}", out UserData _u))
-                {
-                    _u.id = _u.login ?? _u.domainid;
-                    _u._ip = clientIp;
-                    httpContext.Features.Set(_u);
-                    return _next(httpContext);
-                }
-                else
-                {
-                    httpContext.Response.StatusCode = 404;
-                    return Task.CompletedTask;
+                    if (memory.TryGetValue($"RemoteAPI:{clientIp}", out UserData _u))
+                    {
+                        httpContext.Features.Set(_u);
+                        return _next(httpContext);
+                    }
+                    else if (TorAPI.db.LastOrDefault(i => i.Value.clientIps.Contains(clientIp)).Value is TorInfo info)
+                    {
+                        httpContext.Features.Set(info.user);
+                        return _next(httpContext);
+                    }
+                    else
+                    {
+                        httpContext.Response.StatusCode = 404;
+                        return Task.CompletedTask;
+                    }
                 }
             }
             #endregion
@@ -172,7 +173,7 @@ namespace MatriX.API.Engine.Middlewares
                             httpContext.Features.Set(new UserData() 
                             { 
                                 id = login, 
-                                login = login, 
+                                login = login,
                                 passwd = passwd, 
                                 _ip = httpContext.Request.Headers["X-Client-IP"].ToString(), 
                                 versionts = httpContext.Request.Headers["X-Versionts"].ToString(), 

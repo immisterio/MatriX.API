@@ -133,7 +133,7 @@ namespace MatriX.API.Engine.Middlewares
             {
                 if (httpContext.Request.Path.Value.StartsWith("/shutdown"))
                 {
-                    await httpContext.Response.WriteAsync("error", httpContext.RequestAborted);
+                    await httpContext.Response.WriteAsync("error", httpContext.RequestAborted).ConfigureAwait(false);
                     return;
                 }
 
