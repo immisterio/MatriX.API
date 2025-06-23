@@ -34,10 +34,13 @@ namespace MatriX.API.Engine.Middlewares
         {
             Directory.CreateDirectory("logs/process");
 
-            ThreadPool.QueueUserWorkItem(_ =>
+            ThreadPool.QueueUserWorkItem(async _ =>
             {
-                while (!AppInit.Win32NT && AppInit.settings.lsof)
+                while (!AppInit.Win32NT)
                 {
+                    if (!AppInit.settings.lsof)
+                        await Task.Delay(TimeSpan.FromSeconds(1));
+
                     string result = Bash.Run("lsof -i -P -n");
                     if (result != null)
                         lsof = result;

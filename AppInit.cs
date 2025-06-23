@@ -24,46 +24,54 @@ namespace MatriX.API
             #region updateSettings
             void updateSettings()
             {
-                string path = $"{appfolder}/settings.json";
-
-                if (!File.Exists(path))
+                try
                 {
-                    if (cachesettings.Item1 == null)
-                        cachesettings.Item1 = new Setting();
+                    string path = $"{appfolder}/settings.json";
 
-                    return;
+                    if (!File.Exists(path))
+                    {
+                        if (cachesettings.Item1 == null)
+                            cachesettings.Item1 = new Setting();
+
+                        return;
+                    }
+
+                    var lastWriteTime = File.GetLastWriteTime(path);
+
+                    if (cachesettings.Item2 != lastWriteTime)
+                    {
+                        cachesettings.Item2 = lastWriteTime;
+                        cachesettings.Item1 = JsonConvert.DeserializeObject<Setting>(File.ReadAllText(path));
+                    }
                 }
-
-                var lastWriteTime = File.GetLastWriteTime(path);
-
-                if (cachesettings.Item2 != lastWriteTime)
-                {
-                    cachesettings.Item2 = lastWriteTime;
-                    cachesettings.Item1 = JsonConvert.DeserializeObject<Setting>(File.ReadAllText(path));
-                }
+                catch { }
             }
             #endregion
 
             #region updateUsers
             void updateUsers()
             {
-                string path = $"{appfolder}/usersDb.json";
-
-                if (!File.Exists(path))
+                try
                 {
-                    if (cacheusersDb.Item1 == null)
-                        cacheusersDb.Item1 = new ConcurrentBag<UserData>();
+                    string path = $"{appfolder}/usersDb.json";
 
-                    return;
+                    if (!File.Exists(path))
+                    {
+                        if (cacheusersDb.Item1 == null)
+                            cacheusersDb.Item1 = new ConcurrentBag<UserData>();
+
+                        return;
+                    }
+
+                    var lastWriteTime = File.GetLastWriteTime(path);
+
+                    if (cacheusersDb.Item2 != lastWriteTime)
+                    {
+                        cacheusersDb.Item2 = lastWriteTime;
+                        cacheusersDb.Item1 = JsonConvert.DeserializeObject<ConcurrentBag<UserData>>(File.ReadAllText(path));
+                    }
                 }
-
-                var lastWriteTime = File.GetLastWriteTime(path);
-
-                if (cacheusersDb.Item2 != lastWriteTime)
-                {
-                    cacheusersDb.Item2 = lastWriteTime;
-                    cacheusersDb.Item1 = JsonConvert.DeserializeObject<ConcurrentBag<UserData>>(File.ReadAllText(path));
-                }
+                catch { }
             }
             #endregion
 
