@@ -7,7 +7,7 @@ apt-get install -y wget unzip sysstat iproute2 lsof
 # Install .NET
 wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh 
 chmod 755 dotnet-install.sh
-./dotnet-install.sh --channel 8.0 --runtime aspnetcore
+./dotnet-install.sh --channel 9.0 --runtime aspnetcore
 
 # Download zip
 mkdir $DEST -p 

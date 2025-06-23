@@ -108,7 +108,7 @@ namespace MatriX.API
 
                 while (true)
                 {
-                    await Task.Delay(firstwhile ? TimeSpan.FromSeconds(5) : TimeSpan.FromMinutes(1)).ConfigureAwait(false);
+                    await Task.Delay(firstwhile ? TimeSpan.FromSeconds(5) : TimeSpan.FromMinutes(1));
                     firstwhile = false;
 
                     try
@@ -118,90 +118,94 @@ namespace MatriX.API
 
                         foreach (var server in AppInit.settings.servers)
                         {
-                            if (!server.enable || string.IsNullOrEmpty(server.host))
-                                continue;
-
-                            if (server.host.Contains("127.0.0.1"))
+                            try
                             {
-                                server.status = 1;
-                                continue;
-                            }
+                                if (!server.enable || string.IsNullOrEmpty(server.host))
+                                    continue;
 
-                            using (HttpClient client = Startup.httpClientFactory != default ? Startup.httpClientFactory.CreateClient("base") : new HttpClient())
-                            {
-                                client.Timeout = TimeSpan.FromSeconds(10);
-
-                                var response = await client.GetAsync($"{server.host}/echo").ConfigureAwait(false);
-                                if (response.StatusCode == HttpStatusCode.OK)
+                                if (server.host.Contains("127.0.0.1"))
                                 {
-                                    string echo = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                                    server.status = echo.StartsWith("MatriX.") ? 1 : 2;
+                                    server.status = 1;
+                                    continue;
+                                }
 
-                                    if (server.status == 1 && server.limit != null)
+                                using (HttpClient client = Startup.httpClientFactory != default ? Startup.httpClientFactory.CreateClient("base") : new HttpClient())
+                                {
+                                    client.Timeout = TimeSpan.FromSeconds(10);
+
+                                    var response = await client.GetAsync($"{server.host}/echo");
+                                    if (response.StatusCode == HttpStatusCode.OK)
                                     {
-                                        try
+                                        string echo = await response.Content.ReadAsStringAsync();
+                                        server.status = echo.StartsWith("MatriX.") ? 1 : 2;
+
+                                        if (server.status == 1 && server.limit != null)
                                         {
-                                            response = await client.GetAsync($"{server.host}/top");
-                                            string top = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-                                            if (top == null || !top.Contains("mem:"))
-                                                continue;
-
-                                            int.TryParse(Regex.Match(top, "mem: ([0-9]+)").Groups[1].Value, out int mem);
-                                            int.TryParse(Regex.Match(top, "cpu: ([0-9]+)").Groups[1].Value, out int cpu);
-
-                                            int.TryParse(Regex.Match(top, "Received: ([0-9]+)").Groups[1].Value, out int received);
-                                            if (0 > received)
-                                                received = 0;
-
-                                            int.TryParse(Regex.Match(top, "Transmitted: ([0-9]+)").Groups[1].Value, out int transmitted);
-                                            if (0 > transmitted)
-                                                transmitted = 0;
-
-                                            if (server.limit.ram != 0 && mem > server.limit.ram)
+                                            try
                                             {
-                                                server.status = 3;
-                                                continue;
-                                            }
+                                                response = await client.GetAsync($"{server.host}/top");
+                                                string top = await response.Content.ReadAsStringAsync();
 
-                                            if (server.limit.cpu != 0 && cpu > server.limit.cpu)
-                                            {
-                                                server.status = 3;
-                                                continue;
-                                            }
+                                                if (top == null || !top.Contains("mem:"))
+                                                    continue;
 
-                                            if (server.limit.network != null)
-                                            {
-                                                if (server.limit.network.all != 0)
+                                                int.TryParse(Regex.Match(top, "mem: ([0-9]+)").Groups[1].Value, out int mem);
+                                                int.TryParse(Regex.Match(top, "cpu: ([0-9]+)").Groups[1].Value, out int cpu);
+
+                                                int.TryParse(Regex.Match(top, "Received: ([0-9]+)").Groups[1].Value, out int received);
+                                                if (0 > received)
+                                                    received = 0;
+
+                                                int.TryParse(Regex.Match(top, "Transmitted: ([0-9]+)").Groups[1].Value, out int transmitted);
+                                                if (0 > transmitted)
+                                                    transmitted = 0;
+
+                                                if (server.limit.ram != 0 && mem > server.limit.ram)
                                                 {
-                                                    if ((received + transmitted) > server.limit.network.all)
+                                                    server.status = 3;
+                                                    continue;
+                                                }
+
+                                                if (server.limit.cpu != 0 && cpu > server.limit.cpu)
+                                                {
+                                                    server.status = 3;
+                                                    continue;
+                                                }
+
+                                                if (server.limit.network != null)
+                                                {
+                                                    if (server.limit.network.all != 0)
+                                                    {
+                                                        if ((received + transmitted) > server.limit.network.all)
+                                                        {
+                                                            server.status = 3;
+                                                            continue;
+                                                        }
+                                                    }
+
+                                                    if (server.limit.network.transmitted != 0 && transmitted > server.limit.network.transmitted)
+                                                    {
+                                                        server.status = 3;
+                                                        continue;
+                                                    }
+
+                                                    if (server.limit.network.received != 0 && received > server.limit.network.received)
                                                     {
                                                         server.status = 3;
                                                         continue;
                                                     }
                                                 }
-
-                                                if (server.limit.network.transmitted != 0 && transmitted > server.limit.network.transmitted)
-                                                {
-                                                    server.status = 3;
-                                                    continue;
-                                                }
-
-                                                if (server.limit.network.received != 0 && received > server.limit.network.received)
-                                                {
-                                                    server.status = 3;
-                                                    continue;
-                                                }
                                             }
+                                            catch { }
                                         }
-                                        catch { }
+                                    }
+                                    else
+                                    {
+                                        server.status = 2;
                                     }
                                 }
-                                else
-                                {
-                                    server.status = 2;
-                                }
                             }
+                            catch { server.status = 3; }
                         }
                     }
                     catch { }
