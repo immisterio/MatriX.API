@@ -220,7 +220,7 @@ namespace MatriX.API
                     {
                         string top = "mem: " + Bash.Run("free -t | awk '/Mem/{printf(\\\"%.0f\\n\\\", ($3-$6)/$2 * 100)}'"); // процент 1-100
                         top += "cpu: " + Bash.Run("uptime | grep -o 'load average: .*' | awk -F ', ' '{print $2}'");
-                        top += Bash.Run("sar -n DEV 1 60 | grep Average | grep "+AppInit.settings.interface_network+ " | awk '{print \\\"Received: \\\" $5*8/1024 \\\" Mbit/s, Transmitted: \\\" $6*8/1024 \\\" Mbit/s\\\"}'");
+                        top += Bash.Run("sar -n DEV 1 60 | grep Average | grep " + AppInit.settings.interface_network + " | awk '{print \\\"Received: \\\" $5*8/1024 \\\" Mbit/s, Transmitted: \\\" $6*8/1024 \\\" Mbit/s\\\"}'");
 
                         AppInit.top = top;
                     }

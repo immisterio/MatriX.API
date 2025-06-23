@@ -17,9 +17,9 @@ namespace MatriX.API
         {
             services.AddHttpClient("base").ConfigurePrimaryHttpMessageHandler(() =>
             {
-                var handler = new System.Net.Http.HttpClientHandler()
+                var handler = new HttpClientHandler()
                 {
-                    AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Brotli | System.Net.DecompressionMethods.Deflate,
+                    AutomaticDecompression = System.Net.DecompressionMethods.All,
                     AllowAutoRedirect = true
                 };
 

@@ -11,6 +11,14 @@ namespace MatriX.API
 {
     public class AppInit
     {
+        public static bool Win32NT => Environment.OSVersion.Platform == PlatformID.Win32NT;
+
+        public static string appfolder = Directory.GetCurrentDirectory();
+
+        public static string top = string.Empty;
+
+        public static ConcurrentBag<IPNetwork> whiteip = new ConcurrentBag<IPNetwork>();
+
         static AppInit()
         {
             #region updateSettings
@@ -72,12 +80,6 @@ namespace MatriX.API
                 }
             });
         }
-
-        public static string appfolder = Directory.GetCurrentDirectory();
-
-        public static string top = string.Empty;
-
-        public static ConcurrentBag<IPNetwork> whiteip = new ConcurrentBag<IPNetwork>();
 
 
         #region settings.json

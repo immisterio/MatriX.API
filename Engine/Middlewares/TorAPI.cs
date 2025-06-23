@@ -36,7 +36,7 @@ namespace MatriX.API.Engine.Middlewares
 
             ThreadPool.QueueUserWorkItem(_ =>
             {
-                while (true)
+                while (!AppInit.Win32NT && AppInit.settings.lsof)
                 {
                     string result = Bash.Run("lsof -i -P -n");
                     if (result != null)

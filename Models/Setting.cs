@@ -38,6 +38,8 @@ namespace MatriX.API.Models
 
         public string defaultPasswd { get; set; } = "ts";
 
+        public bool lsof { get; set; }
+
         public HashSet<Known> KnownProxies { get; set; } = new HashSet<Known>();
     }
 }
