@@ -42,10 +42,7 @@ namespace MatriX.API.Engine.Middlewares
         {
             #region Служебный запрос
             if (httpContext.Request.Path.Value.StartsWith("/favicon.ico"))
-            {
-                httpContext.Response.BodyWriter.WriteAsync(File.ReadAllBytes("favicon.ico")).ConfigureAwait(false);
-                return Task.CompletedTask;
-            }
+                return httpContext.Response.SendFileAsync("favicon.ico");
 
             string clientIp = httpContext.Connection.RemoteIpAddress.ToString();
 

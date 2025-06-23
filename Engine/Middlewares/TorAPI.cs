@@ -655,15 +655,17 @@ namespace MatriX.API.Engine.Middlewares
                     throw new NotSupportedException("NotSupported_UnwritableStream");
 
 
-                byte[] buffer = ArrayPool<byte>.Shared.Rent(response.ContentLength > 0 ? (int)Math.Min((long)response.ContentLength, 512000) : 4096);
+                byte[] buffer = ArrayPool<byte>.Shared.Rent(4096);
 
                 try
                 {
                     int bytesRead;
-                    while ((bytesRead = await responseStream.ReadAsync(new Memory<byte>(buffer), context.RequestAborted).ConfigureAwait(false)) != 0)
+                    Memory<byte> memoryBuffer = buffer.AsMemory();
+
+                    while ((bytesRead = await responseStream.ReadAsync(memoryBuffer, context.RequestAborted).ConfigureAwait(false)) != 0)
                     {
                         info.lastActive = DateTime.Now;
-                        await response.Body.WriteAsync(new ReadOnlyMemory<byte>(buffer, 0, bytesRead), context.RequestAborted).ConfigureAwait(false);
+                        await response.Body.WriteAsync(memoryBuffer.Slice(0, bytesRead), context.RequestAborted).ConfigureAwait(false);
                     }
                 }
                 finally

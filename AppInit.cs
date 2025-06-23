@@ -1,30 +1,30 @@
-﻿using Newtonsoft.Json;
-using System.IO;
+﻿using MatriX.API.Models;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
-using MatriX.API.Models;
+using System.IO;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MatriX.API
 {
     public class AppInit
     {
-        public static string appfolder = Directory.GetCurrentDirectory();
-
-        public static string top = string.Empty;
-
-        public static ConcurrentBag<IPNetwork> whiteip = new ConcurrentBag<IPNetwork>();
-
-        #region settings.json
-        static (Setting, DateTime) cachesettings = default;
-        public static Setting settings
+        static AppInit()
         {
-            get
+            #region updateSettings
+            void updateSettings()
             {
                 string path = $"{appfolder}/settings.json";
 
                 if (!File.Exists(path))
-                    return new Setting();
+                {
+                    if (cachesettings.Item1 == null)
+                        cachesettings.Item1 = new Setting();
+
+                    return;
+                }
 
                 var lastWriteTime = File.GetLastWriteTime(path);
 
@@ -33,22 +33,21 @@ namespace MatriX.API
                     cachesettings.Item2 = lastWriteTime;
                     cachesettings.Item1 = JsonConvert.DeserializeObject<Setting>(File.ReadAllText(path));
                 }
-
-                return cachesettings.Item1;
             }
-        }
-        #endregion
+            #endregion
 
-        #region usersDb.json
-        static (ConcurrentBag<UserData>, DateTime) cacheusersDb = default;
-        public static ConcurrentBag<UserData> usersDb
-        {
-            get
+            #region updateUsers
+            void updateUsers()
             {
                 string path = $"{appfolder}/usersDb.json";
 
                 if (!File.Exists(path))
-                    return new ConcurrentBag<UserData>();
+                {
+                    if (cacheusersDb.Item1 == null)
+                        cacheusersDb.Item1 = new ConcurrentBag<UserData>();
+
+                    return;
+                }
 
                 var lastWriteTime = File.GetLastWriteTime(path);
 
@@ -57,13 +56,43 @@ namespace MatriX.API
                     cacheusersDb.Item2 = lastWriteTime;
                     cacheusersDb.Item1 = JsonConvert.DeserializeObject<ConcurrentBag<UserData>>(File.ReadAllText(path));
                 }
-
-                return cacheusersDb.Item1;
             }
+            #endregion
+
+            updateSettings();
+            updateUsers();
+
+            ThreadPool.QueueUserWorkItem(async _ =>
+            {
+                while (true)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                    updateSettings();
+                    updateUsers();
+                }
+            });
         }
+
+        public static string appfolder = Directory.GetCurrentDirectory();
+
+        public static string top = string.Empty;
+
+        public static ConcurrentBag<IPNetwork> whiteip = new ConcurrentBag<IPNetwork>();
+
+
+        #region settings.json
+        static (Setting, DateTime) cachesettings = default;
+
+        public static Setting settings => cachesettings.Item1;
         #endregion
 
+        #region usersDb.json
+        static (ConcurrentBag<UserData>, DateTime) cacheusersDb = default;
 
+        public static ConcurrentBag<UserData> usersDb => cacheusersDb.Item1;
+        #endregion
+
+        #region SaveUsersDb
         public static void SaveUsersDb(ConcurrentBag<UserData> users)
         {
             string path = $"{appfolder}/usersDb.json";
@@ -77,5 +106,6 @@ namespace MatriX.API
             cacheusersDb.Item2 = File.GetLastWriteTime(path);
             cacheusersDb.Item1 = users;
         }
+        #endregion
     }
 }
