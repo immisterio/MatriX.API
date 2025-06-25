@@ -33,6 +33,8 @@ namespace MatriX.API
                 }
             }
 
+            Bash.Run($"chmod +x {AppInit.appfolder}/TorrServer/latest");
+
             #region load whiteip.txt
             if (System.IO.File.Exists($"{AppInit.appfolder}/whiteip.txt"))
             {
