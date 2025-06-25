@@ -1,3 +1,6 @@
+# AI Документация
+[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/immisterio/MatriX.API)
+
 # Установка на linux
 ```
 curl -s https://raw.githubusercontent.com/immisterio/MatriX.API/master/install.sh | bash
@@ -33,11 +36,13 @@ curl -s https://raw.githubusercontent.com/immisterio/MatriX.API/master/install.s
 * worknodetominutes - время работы ts с момента последней активности пользователя
 * maxiptoIsLockHostOrUser - максимальной количество IP в час на пользователя
 * domainid_pattern - поиск domainid для доступа без авторизации, "^([^\\.])\\.matrix.io" / ogurchik.matrix.io
+* domainid_api - домен для авторизации по login/passwd, "matrix.io"
 * AuthorizationRequired - true доступ для пользователей usersDb.json / false любой логин и пароль
 * onlyRemoteApi - true режим API для master сервера / false master сервер
 * servers - список серверов
 * AuthorizationServerAPI - ip сервера с которого разрешены API запросы
 * interface_network - имя интерфейса для статистики нагрузки на канал (по умолчанию eth0)
+* group - минимальная группа пользователя для доступа к серверу
 
 # Переменные servers в settings.json
 * enable - true/false
@@ -46,6 +51,8 @@ curl -s https://raw.githubusercontent.com/immisterio/MatriX.API/master/install.s
 * limit - лимиты cpu/ram/network при достижении которых сервер перестает принимать новые запросы
 * name - отображаемое имя сервера в matrix.io/control
 * host - адрес сервера http://IP:PORT | https://domain.io | etc
+* group - группа пользователя которым доступен сервер
+* groups - группы пользователя которым доступен сервер
 
 # Пример servers в settings.json
 ```
@@ -116,3 +123,17 @@ Germany, Amsterdam, reserve
   "AuthorizationServerAPI": "33.33.33.33"
 }
 ```
+
+# Изменить данные usersDb.json через http
+```
+curl -X POST "http://<host>/api/users/updatedb" \
+  -H "Content-Type: application/json" \
+  -d '[{"login":"ts4","passwd":"test4","versionts":"118"},{"domainid":"ts6"}]'
+```
+
+# Адреса
+* админка пользователя - matrix.io/control
+* для admin - matrix.io/torinfo
+* matrix.io/userdata
+* matrix.io/xrealip
+* matrix.io/headers
