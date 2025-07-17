@@ -108,8 +108,6 @@ namespace MatriX.API.Engine.Middlewares
             }
             #endregion
 
-            memory.Set($"RemoteAPI:{userData._ip}", userData, DateTime.Now.AddDays(1));
-
             bool isStream = Regex.IsMatch(httpContext.Request.Path.Value, "^/(stream|playlist|play/|download/)");
 
             string serip = serv(userData, memory, isStream);
@@ -125,6 +123,8 @@ namespace MatriX.API.Engine.Middlewares
                 return;
             }
 
+            memory.Set($"RemoteAPI:{userData._ip}", userData, DateTime.Now.AddDays(1));
+
             string clearPath = HttpUtility.UrlDecode(httpContext.Request.Path.Value);
             clearPath = Regex.Replace(clearPath, "[а-яА-Я]", "z");
 
@@ -132,11 +132,22 @@ namespace MatriX.API.Engine.Middlewares
 
             if (isStream)
             {
-                if (httpContext.Request.Path.Value.StartsWith("/stream/") && Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|stat|m3u)(&|$)")) { }
+                if (AppInit.settings.remoteStream_pattern != null)
+                {
+                    string domainid = userData.login ?? userData.domainid;
+                    var g = Regex.Match(serip, AppInit.settings.remoteStream_pattern).Groups;
+
+                    httpContext.Response.Redirect($"{g["sheme"]}://{domainid}.{g["server"]}" + clearUri);
+                    return;
+                }
                 else
                 {
-                    httpContext.Response.Redirect($"{serip}{clearUri}");
-                    return;
+                    if (httpContext.Request.Path.Value.StartsWith("/stream/") && Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|stat|m3u)(&|$)")) { }
+                    else
+                    {
+                        httpContext.Response.Redirect($"{serip}{clearUri}");
+                        return;
+                    }
                 }
             }
 

@@ -40,8 +40,10 @@ namespace MatriX.API
 
                     if (cachesettings.Item2 != lastWriteTime)
                     {
-                        cachesettings.Item2 = lastWriteTime;
                         cachesettings.Item1 = JsonConvert.DeserializeObject<Setting>(File.ReadAllText(path));
+                        cachesettings.Item2 = lastWriteTime;
+
+                        File.WriteAllText($"{appfolder}/settings_current.json", JsonConvert.SerializeObject(cachesettings.Item1, Formatting.Indented));
                     }
                 }
                 catch { }

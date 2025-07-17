@@ -59,6 +59,8 @@ namespace MatriX.API.Models
         /// </summary>
         public string domainid_pattern { get; set; } = "^([^\\.]{8})\\.";
 
+        public string remoteStream_pattern { get; set; } = "(?<sheme>https?)://slave.(?<server>[^/]+)";
+
         /// <summary>
         /// API домен для domainid авторизации
         /// </summary>

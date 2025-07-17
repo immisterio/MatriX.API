@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <UserSecretsId>88dba83d-18a4-4477-811f-067572d28f09</UserSecretsId>
     <AssemblyName>MatriX.API</AssemblyName>
     <RootNamespace>MatriX.API</RootNamespace>
   </PropertyGroup>
