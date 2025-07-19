@@ -101,13 +101,13 @@ namespace MatriX.API.Controllers
 			{
 				foreach (var server in AppInit.settings.servers)
                 {
-					if (!server.enable || server.reserve || server.group != userData.group)
+					if (!server.enable)
 						continue;
 
 					if (server.group == userData.group || (server.groups != null && server.groups.Contains(userData.group)))
 					{
 						string _checked = server.host == userData.server ? "checked" : "";
-						string _status = server.status == 1 ? "<b style=\"color: green;\">work</b>" : "<b style=\"color: crimson;\">shutdown</b>";
+						string _status = (server.status == 1 || (server.status == 3 && server.limit_hard != null && server.status_hard != 1)) ? "<b style=\"color: green;\">work</b>" : "<b style=\"color: crimson;\">shutdown</b>";
 
 						html_servers += $"<div class=\"flex\"><input type=\"radio\" name=\"server\" value=\"{server.host}\" {_checked} /> {server.name}&nbsp; - &nbsp;{_status}</div>";
 					}

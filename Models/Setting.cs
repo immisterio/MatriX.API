@@ -35,6 +35,11 @@ namespace MatriX.API.Models
         public List<Server> servers { get; set; }
 
         /// <summary>
+        /// Резервный сервер
+        /// </summary>
+        public string reserve_server { get; set; }
+
+        /// <summary>
         /// Имя интерфейса для мониторинга трафика на линии (по умолчанию eth0)
         /// </summary>
         public string interface_network { get; set; } = "eth0";

@@ -162,18 +162,41 @@ namespace MatriX.API
                                                 if (0 > transmitted)
                                                     transmitted = 0;
 
+                                                #region ram
                                                 if (server.limit.ram != 0 && mem > server.limit.ram)
                                                 {
                                                     server.status = 3;
                                                     continue;
                                                 }
 
+                                                if (server.limit_hard != null)
+                                                {
+                                                    if (server.limit_hard.ram != 0 && mem > server.limit_hard.ram)
+                                                    {
+                                                        server.status_hard = 1;
+                                                        continue;
+                                                    }
+                                                }
+                                                #endregion
+
+                                                #region cpu
                                                 if (server.limit.cpu != 0 && cpu > server.limit.cpu)
                                                 {
                                                     server.status = 3;
                                                     continue;
                                                 }
 
+                                                if (server.limit_hard != null)
+                                                {
+                                                    if (server.limit_hard.cpu != 0 && cpu > server.limit_hard.cpu)
+                                                    {
+                                                        server.status_hard = 1;
+                                                        continue;
+                                                    }
+                                                }
+                                                #endregion
+
+                                                #region network
                                                 if (server.limit.network != null)
                                                 {
                                                     if (server.limit.network.all != 0)
@@ -197,6 +220,33 @@ namespace MatriX.API
                                                         continue;
                                                     }
                                                 }
+                                                #endregion
+
+                                                #region network_hard
+                                                if (server.limit_hard != null && server.limit_hard.network != null)
+                                                {
+                                                    if (server.limit_hard.network.all != 0)
+                                                    {
+                                                        if ((received + transmitted) > server.limit_hard.network.all)
+                                                        {
+                                                            server.status_hard = 1;
+                                                            continue;
+                                                        }
+                                                    }
+
+                                                    if (server.limit_hard.network.transmitted != 0 && transmitted > server.limit_hard.network.transmitted)
+                                                    {
+                                                        server.status_hard = 1;
+                                                        continue;
+                                                    }
+
+                                                    if (server.limit_hard.network.received != 0 && received > server.limit_hard.network.received)
+                                                    {
+                                                        server.status_hard = 1;
+                                                        continue;
+                                                    }
+                                                }
+                                                #endregion
                                             }
                                             catch { }
                                         }
@@ -207,7 +257,7 @@ namespace MatriX.API
                                     }
                                 }
                             }
-                            catch { server.status = 3; }
+                            catch { server.status = 2; }
                         }
                     }
                     catch { }

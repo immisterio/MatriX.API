@@ -25,63 +25,123 @@ namespace MatriX.API.Engine.Middlewares
 
         static readonly object lockObj = typeof(RemoteAPI);
 
+        public RemoteAPI(RequestDelegate next, IMemoryCache memory, IHttpClientFactory httpClientFactory)
+        {
+            _next = next;
+            this.memory = memory;
+            this.httpClientFactory = httpClientFactory;
+        }
+        #endregion
+
+        #region serv
         public static string serv(UserData userData, IMemoryCache mem, bool isStream)
         {
             lock (lockObj)
             {
-                Server[] working_servers = AppInit.settings.servers?.Where(i =>
-                    i.enable &&
-                    (i.group == userData.group || (i.groups != null && i.groups.Contains(userData.group))) &&
-                    i.status == 1 &&
-                    (i.workinghours == null || i.workinghours.Contains(DateTime.UtcNow.Hour))
+                // список активных серверов
+                Server[] servers = AppInit.settings.servers?.Where(i =>
+                    i.enable && (i.group == userData.group || (i.groups != null && i.groups.Contains(userData.group)))
                 )?.ToArray();
 
-                if (working_servers == null || working_servers.Length == 0)
-                {
-                    // рабочие сервера у которых workinghours не совпадает с текущим Hour
-                    working_servers = AppInit.settings.servers?.Where(i => i.enable && i.status == 1 && i.workinghours != null && !i.workinghours.Contains(DateTime.UtcNow.Hour))?.ToArray();
-                    if (working_servers == null || working_servers.Length == 0)
-                    {
-                        // резерв на случай перегрузки основных серверов
-                        working_servers = AppInit.settings.servers?.Where(i => i.enable && i.status == 1 && i.reserve)?.ToArray();
-                        if (working_servers == null || working_servers.Length == 0)
-                            return "http://127.0.0.1";
-                    }
-                }
 
-                if (!string.IsNullOrEmpty(userData.server))
+                if (!string.IsNullOrEmpty(userData.server) && servers != null)
                 {
-                    if (working_servers.FirstOrDefault(i => i.host == userData.server) != null)
+                    if (servers.FirstOrDefault(i => i.host == userData.server && (i.status == 1 || (i.status == 3 && i.limit_hard != null && i.status_hard != 1))) != null)
                         return userData.server;
                 }
 
-                string server = working_servers[Random.Shared.Next(0, working_servers.Length)].host;
-                if (mem == null)
-                    return server;
+                // сервера с проверкой workinghours
+                Server[] working_servers = servers?.Where(i => i.status == 1 && i.workinghours != null && i.workinghours.Contains(DateTime.UtcNow.Hour))?.ToArray();
+
+                if (working_servers == null || working_servers.Length == 0)
+                {
+                    // сервера без проверки workinghours
+                    working_servers = servers?.Where(i => i.status == 1)?.ToArray();
+                    if (working_servers == null || working_servers.Length == 0) 
+                        return "http://127.0.0.1";
+                }
 
                 string mkey = $"RemoteAPI:serv:{userData.id}";
-                if (mem.TryGetValue(mkey, out string _serv))
+                if (mem != null && mem.TryGetValue(mkey, out string _serv))
                 {
                     if (isStream)
                         return _serv;
 
-                    if (AppInit.settings.servers.FirstOrDefault(i => i.enable && i.status != 2 && i.host == _serv) != null)
+                    if (servers.FirstOrDefault(i => i.host == _serv && i.status == 1) != null)
                     {
                         mem.Set(mkey, _serv, DateTime.Now.AddHours(4));
                         return _serv;
                     }
                 }
 
+                #region weight
+                // 1. Получить массив рабочих серверов (working_servers).
+                // 2. Для каждого сервера получить его вес (например, свойство weight).
+                // 3. Сформировать список, где каждый сервер повторяется столько раз, каков его вес.
+                // 4. Случайным образом выбрать сервер из этого списка.
+                // 5. Вернуть host выбранного сервера.
+
+                string server;
+                if (working_servers.Length == 1)
+                {
+                    server = working_servers[0].host;
+                }
+                else
+                {
+                    var weightedList = new List<Server>();
+                    foreach (var srv in working_servers)
+                    {
+                        for (int i = 0; i < srv.weight; i++)
+                            weightedList.Add(srv);
+                    }
+
+                    server = weightedList[Random.Shared.Next(weightedList.Count)].host;
+                }
+                #endregion
+
+                if (mem == null)
+                    return server;
+
                 mem.Set(mkey, server, DateTime.Now.AddHours(4));
                 return server;
             }
         }
+        #endregion
 
-        public RemoteAPI(RequestDelegate next, IMemoryCache memory, IHttpClientFactory httpClientFactory)
+        #region servHard
+        string servHard(UserData userData, bool isStream)
         {
-            _next = next;
-            this.memory = memory;
-            this.httpClientFactory = httpClientFactory;
+            lock (lockObj)
+            {
+                // рабочие сервера с лимитом нагрузки, но не перегружены в limit_hard
+                Server[] working_servers = AppInit.settings.servers?.Where(i =>
+                    i.enable && i.status == 3 && i.limit_hard != null && i.status_hard != 1 && 
+                    (i.group == userData.group || (i.groups != null && i.groups.Contains(userData.group)))
+                )?.ToArray();
+
+                if (working_servers == null || working_servers.Length == 0)
+                    return null;
+
+                string mkey = $"RemoteAPI:serv_hard:{userData.id}";
+                if (memory != null && memory.TryGetValue(mkey, out string _serv))
+                {
+                    if (isStream)
+                        return _serv;
+
+                    if (working_servers.FirstOrDefault(i => i.host == _serv) != null)
+                    {
+                        memory.Set(mkey, _serv, DateTime.Now.AddHours(4));
+                        return _serv;
+                    }
+                }
+
+                string server = working_servers[Random.Shared.Next(working_servers.Length)].host;
+                if (memory == null)
+                    return server;
+
+                memory.Set(mkey, server, DateTime.Now.AddHours(4));
+                return server;
+            }
         }
         #endregion
 
@@ -113,14 +173,22 @@ namespace MatriX.API.Engine.Middlewares
             string serip = serv(userData, memory, isStream);
             if (serip.Contains("127.0.0.1"))
             {
-                if (AppInit.settings.onlyRemoteApi)
+                serip = servHard(userData, isStream);
+                if (string.IsNullOrEmpty(serip))
                 {
-                    await httpContext.Response.WriteAsync("no working servers", httpContext.RequestAborted).ConfigureAwait(false);
-                    return;
-                }
+                    serip = AppInit.settings.reserve_server;
+                    if (string.IsNullOrEmpty(serip))
+                    {
+                        if (AppInit.settings.onlyRemoteApi)
+                        {
+                            await httpContext.Response.WriteAsync("no working servers", httpContext.RequestAborted).ConfigureAwait(false);
+                            return;
+                        }
 
-                await _next(httpContext);
-                return;
+                        await _next(httpContext);
+                        return;
+                    }
+                }
             }
 
             memory.Set($"RemoteAPI:{userData._ip}", userData, DateTime.Now.AddDays(1));
