@@ -77,6 +77,9 @@ namespace MatriX.API.Engine.Middlewares
                     }
                 }
 
+                if (httpContext.Request.Path.Value.StartsWith("/echo"))
+                    return httpContext.Response.WriteAsync("MatriX.API");
+
                 httpContext.Response.StatusCode = 403;
                 httpContext.Response.ContentType = "text/plain; charset=utf-8";
                 return httpContext.Response.WriteAsync(AppInit.settings.UserNotFoundToMessage);

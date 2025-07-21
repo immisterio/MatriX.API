@@ -70,7 +70,7 @@ namespace MatriX.API.Models
                 {
                     if (!string.IsNullOrEmpty(user.id))
                     {
-                        foreach (string line in Bash.Run($"ps axu | grep \"/sandbox/{user.id}\" | grep -v grep | awk '{{print $2}}'").Split("\n"))
+                        foreach (string line in Bash.Run($"ps axu | egrep \"/sandbox/{user.id}$\" | grep -v grep | awk '{{print $2}}'").Split("\n"))
                         {
                             if (int.TryParse(line, out int pid))
                                 Bash.Run($"kill -9 {pid}");

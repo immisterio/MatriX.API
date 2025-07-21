@@ -67,6 +67,7 @@ namespace MatriX.API.Engine.Middlewares
         #region NextPort
         static readonly object portLock = new object();
         static int currentport = 40000;
+
         static int NextPort()
         {
             lock (portLock)
@@ -87,6 +88,11 @@ namespace MatriX.API.Engine.Middlewares
 
                 return currentport;
             }
+        }
+
+        static (int ts, int peersListen) goPort()
+        {
+            return (NextPort(), NextPort());
         }
         #endregion
 
@@ -134,6 +140,12 @@ namespace MatriX.API.Engine.Middlewares
                 return;
             }
             #endregion
+
+            if (string.IsNullOrEmpty(userData.id))
+            {
+                await httpContext.Response.WriteAsync("user id empty", httpContext.RequestAborted).ConfigureAwait(false);
+                return;
+            }
 
             TorInfo info;
             string errorNewToTS = null;
@@ -187,9 +199,11 @@ namespace MatriX.API.Engine.Middlewares
 
             if (startNewTS)
             {
-                info.port = NextPort();
-                while (IsPortInUse(info.port))
-                    info.port = NextPort();
+                var port = goPort();
+                while (IsPortInUse(port.ts) || IsPortInUse(port.peersListen))
+                    port = goPort();
+
+                info.port = port.ts;
 
                 #region Создаем папку пользователя
                 if (!File.Exists($"{inDir}/sandbox/{info.user.id}/settings.json"))
@@ -213,7 +227,7 @@ namespace MatriX.API.Engine.Middlewares
                         default_settings = Regex.Replace(default_settings, "(\"ReaderReadAHead\"):([^,]+)", $"$1:{ReaderReadAHead}", RegexOptions.IgnoreCase);
                         default_settings = Regex.Replace(default_settings, "(\"PreloadCache\"):([^,]+)", $"$1:{PreloadCache}", RegexOptions.IgnoreCase);
 
-                        default_settings = Regex.Replace(default_settings, "(\"PeersListenPort\"):([^,]+)", $"$1:{info.port + 2}", RegexOptions.IgnoreCase);
+                        default_settings = Regex.Replace(default_settings, "(\"PeersListenPort\"):([^,]+)", $"$1:{port.peersListen}", RegexOptions.IgnoreCase);
 
                         File.WriteAllText($"{inDir}/sandbox/{info.user.id}/settings.json", default_settings);
                     }
