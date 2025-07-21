@@ -96,6 +96,10 @@ namespace MatriX.API.Models
         /// </summary>
         public string defaultPasswd { get; set; } = "ts";
 
+        public string tsargs { get; set; }
+
+        public int tsCheckPortTimeout { get; set; } = 15;
+
         /// <summary>
         /// Использовать lsof для мониторинга системы
         /// </summary>

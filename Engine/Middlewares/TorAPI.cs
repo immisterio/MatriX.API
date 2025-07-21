@@ -68,13 +68,20 @@ namespace MatriX.API.Engine.Middlewares
         static readonly object portLock = new object();
         static int currentport = 40000;
 
-        static int NextPort()
+        static int NextPort(bool useRandom = true)
         {
             lock (portLock)
             {
-                currentport = currentport + Random.Shared.Next(5, 20);
-                if (currentport > 60000)
-                    currentport = 40000 + Random.Shared.Next(5, 20);
+                if (useRandom)
+                {
+                    currentport = currentport + Random.Shared.Next(2, 10);
+                    if (currentport > 60000)
+                        currentport = 40000 + Random.Shared.Next(2, 10);
+                }
+                else
+                {
+                    currentport++;
+                }
 
                 if (lsof.Contains(currentport.ToString()))
                 {
@@ -92,7 +99,7 @@ namespace MatriX.API.Engine.Middlewares
 
         static (int ts, int peersListen) goPort()
         {
-            return (NextPort(), NextPort());
+            return (NextPort(), NextPort(false));
         }
         #endregion
 
@@ -268,6 +275,9 @@ namespace MatriX.API.Engine.Middlewares
                             arguments += $" -m {info.user.maxSize}";
                         else if (AppInit.settings.maxSize > 0 && info.user.maxSize != -1)
                             arguments += $" -m {AppInit.settings.maxSize}";
+
+                        if (!string.IsNullOrEmpty(AppInit.settings.tsargs))
+                            arguments += $" {AppInit.settings.tsargs.Trim()}";
 
                         var processInfo = new ProcessStartInfo();
                         processInfo.UseShellExecute = false;
@@ -483,6 +493,10 @@ namespace MatriX.API.Engine.Middlewares
                 {
                     try
                     {
+                        string arguments = $"--httpauth -p {info.port} -d {inDir}/sandbox/{info.user.login}";
+                        if (!string.IsNullOrEmpty(AppInit.settings.tsargs))
+                            arguments += $" {AppInit.settings.tsargs.Trim()}";
+
                         File.WriteAllText($"{inDir}/sandbox/{info.user.login}/accs.db", $"{{\"ts\":\"{passwd}\"}}");
 
                         var processInfo = new ProcessStartInfo();
@@ -490,7 +504,7 @@ namespace MatriX.API.Engine.Middlewares
                         processInfo.RedirectStandardError = true;
                         processInfo.RedirectStandardOutput = true;
                         processInfo.FileName = $"{inDir}/TorrServer/{version}";
-                        processInfo.Arguments = $"--httpauth -p {info.port} -d {inDir}/sandbox/{info.user.login}";
+                        processInfo.Arguments = arguments;
 
                         var process = Process.Start(processInfo);
                         if (process != null)
@@ -571,7 +585,7 @@ namespace MatriX.API.Engine.Middlewares
             try
             {
                 bool servIsWork = false;
-                DateTime endTimeCheckort = DateTime.Now.AddSeconds(10);
+                DateTime endTimeCheckort = DateTime.Now.AddSeconds(AppInit.settings.tsCheckPortTimeout);
 
                 while (true)
                 {
