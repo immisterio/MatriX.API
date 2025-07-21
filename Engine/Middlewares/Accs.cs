@@ -27,14 +27,11 @@ namespace MatriX.API.Engine.Middlewares
         public Task Invoke(HttpContext httpContext)
         {
             #region Служебный запрос
-            if (httpContext.Request.Path.Value.StartsWith("/favicon.ico"))
-                return httpContext.Response.SendFileAsync("favicon.ico");
-
             string clientIp = httpContext.Connection.RemoteIpAddress.ToString();
 
-            if (clientIp == "127.0.0.1" || 
-                httpContext.Request.Path.Value.StartsWith("/top") || 
-                httpContext.Request.Path.Value.StartsWith("/xrealip") || 
+            if (clientIp == "127.0.0.1" ||
+                httpContext.Request.Path.Value.StartsWith("/top") ||
+                httpContext.Request.Path.Value.StartsWith("/xrealip") ||
                 httpContext.Request.Path.Value.StartsWith("/headers"))
             {
                 httpContext.Features.Set(new UserData()
@@ -45,6 +42,9 @@ namespace MatriX.API.Engine.Middlewares
                 return _next(httpContext);
             }
             #endregion
+
+            if (httpContext.Request.Path.Value.StartsWith("/favicon.ico"))
+                return httpContext.Response.SendFileAsync("favicon.ico");
 
             if (!string.IsNullOrEmpty(AppInit.settings.domainid_pattern) && httpContext.Request.Host.Value != AppInit.settings.domainid_api && AppInit.settings.AuthorizationServerAPI != clientIp)
             {
@@ -84,6 +84,7 @@ namespace MatriX.API.Engine.Middlewares
             }
             else 
             {
+                #region Авторизация по логину и паролю
                 if (httpContext.Request.Headers.TryGetValue("Authorization", out var Authorization))
                 {
                     try
@@ -171,6 +172,7 @@ namespace MatriX.API.Engine.Middlewares
                         return httpContext.Response.WriteAsync(ex.ToString());
                     }
                 }
+                #endregion
 
                 #region Обработка stream потока и msx
                 if (httpContext.Request.Method == "GET" && Regex.IsMatch(httpContext.Request.Path.Value, "^/(stream|playlist|play/|msx/)"))

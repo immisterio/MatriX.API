@@ -35,6 +35,8 @@ namespace MatriX.API
 
             Bash.Run($"chmod +x {AppInit.appfolder}/TorrServer/latest");
 
+            ThreadPool.SetMinThreads(4096, 1024);
+
             #region load whiteip.txt
             if (System.IO.File.Exists($"{AppInit.appfolder}/whiteip.txt"))
             {

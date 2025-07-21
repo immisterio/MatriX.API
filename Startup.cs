@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http;
 using System.Text.Json.Serialization;
-using System.Threading;
 
 namespace MatriX.API
 {
@@ -52,8 +51,6 @@ namespace MatriX.API
 
             app.UseForwardedHeaders(forwarded);
             #endregion
-
-            ThreadPool.SetMinThreads(4096, 1024);
 
             app.UseRouting();
             app.UseModHeaders();

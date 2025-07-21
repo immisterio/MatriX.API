@@ -39,7 +39,7 @@ namespace MatriX.API.Engine.Middlewares
                 while (!AppInit.Win32NT)
                 {
                     if (!AppInit.settings.lsof)
-                        await Task.Delay(TimeSpan.FromSeconds(1));
+                        await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
 
                     string result = Bash.Run("lsof -i -P -n");
                     if (result != null)
@@ -115,6 +115,9 @@ namespace MatriX.API.Engine.Middlewares
         }
         #endregion
 
+
+        static readonly object newTsLock = new object();
+
         async public Task InvokeAsync(HttpContext httpContext)
         {
             #region search / torinfo / control
@@ -132,37 +135,58 @@ namespace MatriX.API.Engine.Middlewares
             }
             #endregion
 
-            if (!db.TryGetValue(userData.id, out TorInfo info))
+            TorInfo info;
+            string errorNewToTS = null;
+            bool startNewTS = false;
+
+            string inDir = AppInit.appfolder;
+            string version = string.IsNullOrEmpty(userData.versionts) ? "latest" : userData.versionts;
+
+            if (version != "latest" && !File.Exists($"{inDir}/TorrServer/{version}"))
+                version = "latest";
+
+            #region add newTs
+            lock (newTsLock)
             {
-                if (httpContext.Request.Path.Value.StartsWith("/shutdown"))
+                if (!db.TryGetValue(userData.id, out info))
                 {
-                    await httpContext.Response.WriteAsync("error", httpContext.RequestAborted).ConfigureAwait(false);
-                    return;
+                    startNewTS = true;
+                    if (httpContext.Request.Path.Value.StartsWith("/shutdown"))
+                    {
+                        errorNewToTS = "error";
+                    }
+                    else
+                    {
+                        logAction(userData.id, "start run");
+                        
+                        info = new TorInfo()
+                        {
+                            user = userData,
+                            lastActive = DateTime.Now
+                        };
+
+                        if (db.TryAdd(info.user.id, info))
+                        {
+                            info.taskCompletionSource = new TaskCompletionSource<bool>();
+                        }
+                        else
+                        {
+                            errorNewToTS = "error: db.TryAdd(dbKeyOrLogin, info)";
+                        }
+                    }
                 }
+            }
+            #endregion
 
-                logAction(userData.id, "start run");
-                string inDir = AppInit.appfolder;
-                string version = string.IsNullOrEmpty(userData.versionts) ? "latest" : userData.versionts;
+            if (errorNewToTS != null)
+            {
+                logAction(userData.id, errorNewToTS);
+                await httpContext.Response.WriteAsync(errorNewToTS, httpContext.RequestAborted).ConfigureAwait(false);
+                return;
+            }
 
-                if (version != "latest" && !File.Exists($"{inDir}/TorrServer/{version}"))
-                    version = "latest";
-
-                #region TorInfo
-                info = new TorInfo()
-                {
-                    user = userData,
-                    lastActive = DateTime.Now
-                };
-
-                if (!db.TryAdd(info.user.id, info))
-                {
-                    await httpContext.Response.WriteAsync("error: db.TryAdd(dbKeyOrLogin, info)");
-                    return;
-                }
-
-                info.taskCompletionSource = new TaskCompletionSource<bool>();
-                #endregion
-
+            if (startNewTS)
+            {
                 info.port = NextPort();
                 while (IsPortInUse(info.port))
                     info.port = NextPort();
@@ -286,9 +310,11 @@ namespace MatriX.API.Engine.Middlewares
                     info.taskCompletionSource.SetResult(false);
                     info.taskCompletionSource = null;
 
+                    if (info.thread != null)
+                        logAction(info.user.id, "stop - checkport");
+
                     info.Dispose();
                     db.TryRemove(info.user.id, out _);
-                    logAction(info.user.id, "stop - checkport");
                     await httpContext.Response.WriteAsync(info?.exception ?? "failed to start", httpContext.RequestAborted).ConfigureAwait(false);
                     return;
                 }
@@ -478,10 +504,10 @@ namespace MatriX.API.Engine.Middlewares
                     info.taskCompletionSource = null;
 
                     string exception = info.exception;
+                    logAction(info.user.id, "stop - checkport");
 
                     info?.Dispose();
                     db.TryRemove(login, out _);
-                    logAction(info.user.id, "stop - checkport");
                     await httpContext.Response.WriteAsync(exception ?? "failed to start", httpContext.RequestAborted).ConfigureAwait(false);
                     return;
                 }
@@ -531,7 +557,7 @@ namespace MatriX.API.Engine.Middlewares
             try
             {
                 bool servIsWork = false;
-                DateTime endTimeCheckort = DateTime.Now.AddSeconds(8);
+                DateTime endTimeCheckort = DateTime.Now.AddSeconds(10);
 
                 while (true)
                 {
@@ -540,16 +566,16 @@ namespace MatriX.API.Engine.Middlewares
                         if (DateTime.Now > endTimeCheckort || (info != null && info.thread == null))
                             break;
 
-                        await Task.Delay(50).ConfigureAwait(false);
+                        await Task.Delay(50);
 
                         using (HttpClient client = Startup.httpClientFactory != default ? Startup.httpClientFactory.CreateClient("base") : new HttpClient())
                         {
-                            client.Timeout = TimeSpan.FromSeconds(1);
+                            client.Timeout = TimeSpan.FromSeconds(2);
 
-                            var response = await client.GetAsync($"http://127.0.0.1:{port}/echo").ConfigureAwait(false);
+                            var response = await client.GetAsync($"http://127.0.0.1:{port}/echo");
                             if (response.StatusCode == HttpStatusCode.OK)
                             {
-                                string echo = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                                string echo = await response.Content.ReadAsStringAsync();
                                 if (echo.StartsWith("MatriX."))
                                 {
                                     servIsWork = true;

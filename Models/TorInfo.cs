@@ -68,10 +68,13 @@ namespace MatriX.API.Models
                 #region Bash
                 try
                 {
-                    foreach (string line in Bash.Run($"ps axu | grep \"/sandbox/{user.id}\" | grep -v grep | awk '{{print $2}}'").Split("\n"))
+                    if (!string.IsNullOrEmpty(user.id))
                     {
-                        if (int.TryParse(line, out int pid))
-                            Bash.Run($"kill -9 {pid}");
+                        foreach (string line in Bash.Run($"ps axu | grep \"/sandbox/{user.id}\" | grep -v grep | awk '{{print $2}}'").Split("\n"))
+                        {
+                            if (int.TryParse(line, out int pid))
+                                Bash.Run($"kill -9 {pid}");
+                        }
                     }
 
                     Bash.Run($"kill -9 {_pid}");
