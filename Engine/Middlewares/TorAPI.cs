@@ -74,9 +74,9 @@ namespace MatriX.API.Engine.Middlewares
             {
                 if (useRandom)
                 {
-                    currentport = currentport + Random.Shared.Next(2, 10);
+                    currentport = currentport + Random.Shared.Next(5, 10);
                     if (currentport > 60000)
-                        currentport = 40000 + Random.Shared.Next(2, 10);
+                        currentport = 40000 + Random.Shared.Next(5, 10);
                 }
                 else
                 {
@@ -99,7 +99,7 @@ namespace MatriX.API.Engine.Middlewares
 
         static (int ts, int peersListen) goPort()
         {
-            return (NextPort(), NextPort(false));
+            return (NextPort(), NextPort(useRandom: false));
         }
         #endregion
 
