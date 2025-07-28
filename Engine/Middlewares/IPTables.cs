@@ -23,27 +23,28 @@ namespace MatriX.API.Engine.Middlewares
         }
         #endregion
 
-        #region IsLockHostOrUser
-        bool IsLockHostOrUser(UserData user, out HashSet<string> ips)
+        #region IsWhiteIP
+        bool IsWhiteIP(string clientIP)
         {
-            string memKeyLocIP = $"memKeyLocIP:{user.id}:{DateTime.Now.Hour}";
-            string clientIP = user._ip;
-
-            #region whiteip
             var clientIP2 = IPAddress.Parse(clientIP);
             foreach (var whiteip in AppInit.whiteip)
             {
                 if (whiteip.Contains(clientIP2))
-                {
-                    ips = new HashSet<string>();
-                    return false;
-                }
+                    return true;
             }
-            #endregion
+
+            return false;
+        }
+        #endregion
+
+        #region IsLockHostOrUser
+        bool IsLockHostOrUser(UserData user, out HashSet<string> ips)
+        {
+            string memKeyLocIP = $"memKeyLocIP:{user.id}:{DateTime.Now.Hour}";
 
             if (memoryCache.TryGetValue(memKeyLocIP, out ips))
             {
-                ips.Add(clientIP);
+                ips.Add(user._ip);
                 memoryCache.Set(memKeyLocIP, ips, DateTime.Now.AddHours(1));
 
                 int maxiptoIsLockHostOrUser = AppInit.settings.maxiptoIsLockHostOrUser;
@@ -55,8 +56,40 @@ namespace MatriX.API.Engine.Middlewares
             }
             else
             {
-                ips = new HashSet<string>() { clientIP };
+                ips = new HashSet<string>() { user._ip };
                 memoryCache.Set(memKeyLocIP, ips, DateTime.Now.AddHours(1));
+            }
+
+            return false;
+        }
+        #endregion
+
+        #region IsLockStream
+        bool IsLockStream(string requestPath, UserData user, out HashSet<string> ips)
+        {
+            string memKeyLocIP = $"memKeyLocIP:stream:{user.id}:{DateTime.Now.Hour}";
+
+            if (memoryCache.TryGetValue(memKeyLocIP, out ips))
+            {
+                if (requestPath.StartsWith("/stream"))
+                {
+                    ips.Add(user._ip);
+                    memoryCache.Set(memKeyLocIP, ips, DateTime.Now.AddHours(1));
+                }
+
+                int maxip = AppInit.settings.maxIpToStream;
+                if (user.maxIpToStream > 0)
+                    maxip = user.maxIpToStream;
+
+                if (ips.Count > maxip)
+                    return true;
+            }
+            else
+            {
+                ips = new HashSet<string>() { user._ip };
+
+                if (requestPath.StartsWith("/stream"))
+                    memoryCache.Set(memKeyLocIP, ips, DateTime.Now.AddHours(1));
             }
 
             return false;
@@ -83,11 +116,15 @@ namespace MatriX.API.Engine.Middlewares
                 return httpContext.Response.WriteAsync($"Доступ запрещен, причина: group {AppInit.settings.group} > {userData.group}", httpContext.RequestAborted);
             }
 
-            if (IsLockHostOrUser(userData, out HashSet<string> ips))
+            if (IsWhiteIP(userData._ip) == false)
             {
-                httpContext.Response.StatusCode = 403;
-                httpContext.Response.ContentType = "text/plain; charset=UTF-8";
-                return httpContext.Response.WriteAsync($"Превышено допустимое количество ip. Разбан через {60 - DateTime.Now.Minute} мин.\n\n" + string.Join(", ", ips), httpContext.RequestAborted);
+                HashSet<string> ips;
+                if (IsLockHostOrUser(userData, out ips) || IsLockStream(httpContext.Request.Path.Value, userData, out ips))
+                {
+                    httpContext.Response.StatusCode = 403;
+                    httpContext.Response.ContentType = "text/plain; charset=UTF-8";
+                    return httpContext.Response.WriteAsync($"Превышено допустимое количество ip. Разбан через {60 - DateTime.Now.Minute} мин.\n\n" + string.Join(", ", ips), httpContext.RequestAborted);
+                }
             }
 
             if (userData.whiteip != null && userData.whiteip.Count > 0)

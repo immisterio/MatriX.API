@@ -50,9 +50,14 @@ namespace MatriX.API.Models
         public int worknodetominutes { get; set; } = 5;
 
         /// <summary>
-        /// Максимальное количество IP с тем же пользователем
+        /// Максимальное количество IP на пользователя (любой запрос)
         /// </summary>
-        public int maxiptoIsLockHostOrUser { get; set; } = 8;
+        public int maxiptoIsLockHostOrUser { get; set; } = 10;
+
+        /// <summary>
+        /// Максимальное количество IP для /stream
+        /// </summary>
+        public byte maxIpToStream { get; set; } = 5;
 
         /// <summary>
         /// Максимальный размер (например, квота на ресурсы)

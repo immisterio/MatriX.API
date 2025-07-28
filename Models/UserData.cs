@@ -66,6 +66,8 @@ namespace MatriX.API.Models
         /// </summary>
         public byte maxiptoIsLockHostOrUser { get; set; }
 
+        public byte maxIpToStream { get; set; }
+
         /// <summary>
         /// Список разрешённых IP-адресов для пользователя
         /// </summary>
