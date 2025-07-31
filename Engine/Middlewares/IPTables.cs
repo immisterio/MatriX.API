@@ -6,6 +6,7 @@ using System;
 using Microsoft.Extensions.Caching.Memory;
 using System.Collections.Generic;
 using System.Net;
+using System.Text.RegularExpressions;
 
 namespace MatriX.API.Engine.Middlewares
 {
@@ -102,6 +103,16 @@ namespace MatriX.API.Engine.Middlewares
             if (userData.login == "service" || userData.login == "default" || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
                 return _next(httpContext);
 
+            if (httpContext.Request.Headers.TryGetValue("User-Agent", out var userAgent))
+            {
+                if (Regex.IsMatch(userAgent.ToString(), "(Googlebot|Yandex(bot|Images|Direct)|bingbot|Baiduspider|DuckDuckBot|Slurp)", RegexOptions.IgnoreCase))
+                {
+                    httpContext.Response.StatusCode = 403;
+                    httpContext.Response.ContentType = "text/plain; charset=UTF-8";
+                    return httpContext.Response.WriteAsync("Доступ запрещен для поисковых ботов", httpContext.RequestAborted);
+                }
+            }
+
             if (userData.expires != default && DateTime.Now > userData.expires)
             {
                 httpContext.Response.StatusCode = 403;
@@ -150,6 +161,25 @@ namespace MatriX.API.Engine.Middlewares
                 httpContext.Response.StatusCode = 403;
                 httpContext.Response.ContentType = "text/plain; charset=UTF-8";
                 return httpContext.Response.WriteAsync($"IP {clientIP} отсутствует в списке разрешенных", httpContext.RequestAborted);
+            }
+
+            if (AppInit.settings.onlyRemoteApi == false && httpContext.Request.Path.Value.StartsWith("/stream/"))
+            {
+                if (TorAPI.db.TryGetValue(userData.id, out TorInfo tinfo))
+                {
+                    var filtered = tinfo.filteredActiveStreams;
+                    string tlink = Regex.Match(httpContext.Request.QueryString.Value, @"link=([0-9a-z]+)", RegexOptions.IgnoreCase).Groups[1].Value;
+                    string tindex = Regex.Match(httpContext.Request.QueryString.Value, @"index=([0-9]+)", RegexOptions.IgnoreCase).Groups[1].Value;
+
+                    if (!filtered.ContainsKey($"{tlink}_{tindex}"))
+                    {
+                        if (filtered.Count >= AppInit.settings.rateLimiter.limitStream)
+                        {
+                            httpContext.Response.Redirect(AppInit.settings.rateLimiter.urlVideoError);
+                            return Task.CompletedTask;
+                        }
+                    }
+                }
             }
 
             return _next(httpContext);

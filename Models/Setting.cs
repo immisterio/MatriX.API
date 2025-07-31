@@ -64,6 +64,8 @@ namespace MatriX.API.Models
         /// </summary>
         public long maxSize { get; set; }
 
+        public RateLimit rateLimiter { get; set; } = new RateLimit();
+
         /// <summary>
         /// Шаблон domainid для доступа без авторизации, например "^([^\\.]{8})\\." для ogurchik.matrix.io
         /// </summary>

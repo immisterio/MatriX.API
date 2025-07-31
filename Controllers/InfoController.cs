@@ -1,11 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
-using System.Collections.Generic;
-using System;
-using System.Linq;
-using MatriX.API.Engine.Middlewares;
+﻿using MatriX.API.Engine.Middlewares;
 using MatriX.API.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MatriX.API.Controllers
 {
@@ -34,7 +34,8 @@ namespace MatriX.API.Controllers
                 {
                     port = i.port,
                     user = i.user,
-                    lastActive = i.lastActive
+                    lastActive = i.lastActive,
+                    activeStreams = i.activeStreams
                 };
 
                 if (memoryCache.TryGetValue($"memKeyLocIP:{i.user.id}:{DateTime.Now.Hour}", out HashSet<string> ips))
@@ -58,14 +59,20 @@ namespace MatriX.API.Controllers
         {
             var u = HttpContext.Features.Get<UserData>();
             memoryCache.TryGetValue($"memKeyLocIP:{u.id}:{DateTime.Now.Hour}", out HashSet<string> ips);
+            memoryCache.TryGetValue($"memKeyLocIP:stream:{u.id}:{DateTime.Now.Hour}", out HashSet<string> ips_stream);
+
+            var tinfo = TorAPI.db[u.id];
 
             return Json (new
             {
                 u.id,
                 ip = u._ip,
                 ips,
+                ips_stream,
+                activeStreams = tinfo.filteredActiveStreams,
                 server = string.IsNullOrEmpty(u.server) ? "auto" : AppInit.settings.servers.FirstOrDefault(i => i.host != null && i.host.StartsWith(u.server))?.name ?? "auto",
-                u.maxiptoIsLockHostOrUser,
+                maxiptoIsLockHostOrUser = u.maxiptoIsLockHostOrUser > AppInit.settings.maxiptoIsLockHostOrUser ? u.maxiptoIsLockHostOrUser : AppInit.settings.maxiptoIsLockHostOrUser,
+                maxIpToStream = u.maxIpToStream > AppInit.settings.maxIpToStream ? u.maxIpToStream : AppInit.settings.maxIpToStream,
                 u.domainid,
                 u.login,
                 u.passwd,

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -11,6 +12,8 @@ namespace MatriX.API.Models
     public class TorInfo
     {
         public int port { get; set; }
+
+        public int countError { get; set; }
 
         [JsonIgnore]
         public TaskCompletionSource<bool> taskCompletionSource { get; set; }
@@ -24,7 +27,29 @@ namespace MatriX.API.Models
 
         public DateTime lastActive { get; set; }
 
-        public int countError { get; set; }
+        #region activeStreams
+        [JsonIgnore]
+        public ConcurrentDictionary<string, DateTime> activeStreams = new ConcurrentDictionary<string, DateTime>();
+
+        [JsonIgnore]
+        public ConcurrentDictionary<string, DateTime> filteredActiveStreams
+        {
+            get
+            {
+                DateTime threshold = DateTime.Now.AddSeconds(-AppInit.settings.rateLimiter.timeout);
+                var filtered = new ConcurrentDictionary<string, DateTime>();
+                foreach (var kvp in activeStreams)
+                {
+                    if (kvp.Value >= threshold)
+                        filtered.TryAdd(kvp.Key, kvp.Value);
+                    else
+                        activeStreams.TryRemove(kvp.Key, out _);
+                }
+
+                return filtered;
+            }
+        }
+        #endregion
 
 
         #region process

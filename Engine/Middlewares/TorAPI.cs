@@ -713,6 +713,8 @@ namespace MatriX.API.Engine.Middlewares
 
 
                 byte[] buffer = ArrayPool<byte>.Shared.Rent(4096);
+                string tlink = Regex.Match(context.Request.QueryString.Value, @"link=([0-9a-z]+)", RegexOptions.IgnoreCase).Groups[1].Value;
+                string tindex = Regex.Match(context.Request.QueryString.Value, @"index=([0-9]+)", RegexOptions.IgnoreCase).Groups[1].Value;
 
                 try
                 {
@@ -722,6 +724,10 @@ namespace MatriX.API.Engine.Middlewares
                     while ((bytesRead = await responseStream.ReadAsync(memoryBuffer, context.RequestAborted).ConfigureAwait(false)) != 0)
                     {
                         info.lastActive = DateTime.Now;
+
+                        if (!string.IsNullOrEmpty(tlink))
+                            info.activeStreams[$"{tlink}_{tindex}"] = DateTime.Now;
+
                         await response.Body.WriteAsync(memoryBuffer.Slice(0, bytesRead), context.RequestAborted).ConfigureAwait(false);
                     }
                 }
