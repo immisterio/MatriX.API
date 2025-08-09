@@ -125,12 +125,14 @@ namespace MatriX.API.Engine.Middlewares
                                 if (httpContext.Request.Headers.ContainsKey("X-group") && int.TryParse(httpContext.Request.Headers["X-group"].ToString(), out int _group))
                                     group = _group;
 
+                                string xip = httpContext.Request.Headers["X-Client-IP"].ToString();
+
                                 httpContext.Features.Set(new UserData()
                                 {
-                                    id = login,
+                                    id = shared ? $"{login}/{xip.Replace(":", "_")}" : login,
                                     login = login,
                                     passwd = passwd,
-                                    _ip = httpContext.Request.Headers["X-Client-IP"].ToString(),
+                                    _ip = xip,
                                     versionts = httpContext.Request.Headers["X-Versionts"].ToString(),
                                     maxSize = maxSize,
                                     maxiptoIsLockHostOrUser = maxiptoIsLockHostOrUser,
@@ -171,7 +173,8 @@ namespace MatriX.API.Engine.Middlewares
                                 }
                                 else if (!string.IsNullOrEmpty(AppInit.settings.AuthorizationServerAPI))
                                 {
-                                    return httpContext.Response.WriteAsync($"AuthorizationServerAPI != {clientIp}");
+                                    httpContext.Response.ContentType = "text/plain; charset=utf-8";
+                                    return httpContext.Response.WriteAsync($"Указанный IP в AuthorizationServerAPI для {httpContext.Request.Host.Value} не совпадает с {clientIp}");
                                 }
                             }
                         }
