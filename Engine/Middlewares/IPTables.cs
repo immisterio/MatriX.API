@@ -48,7 +48,7 @@ namespace MatriX.API.Engine.Middlewares
                 ips.Add(user._ip);
                 memoryCache.Set(memKeyLocIP, ips, DateTime.Now.AddHours(1));
 
-                int maxiptoIsLockHostOrUser = AppInit.settings.maxiptoIsLockHostOrUser;
+                int maxiptoIsLockHostOrUser = AppInit.groupSettings(user.group).maxiptoIsLockHostOrUser;
                 if (user.maxiptoIsLockHostOrUser > 0)
                     maxiptoIsLockHostOrUser = user.maxiptoIsLockHostOrUser;
 
@@ -78,7 +78,7 @@ namespace MatriX.API.Engine.Middlewares
                     memoryCache.Set(memKeyLocIP, ips, DateTime.Now.AddHours(1));
                 }
 
-                int maxip = AppInit.settings.maxIpToStream;
+                int maxip = AppInit.groupSettings(user.group).maxIpToStream;
                 if (user.maxIpToStream > 0)
                     maxip = user.maxIpToStream;
 
@@ -173,8 +173,17 @@ namespace MatriX.API.Engine.Middlewares
 
                     if (!filtered.ContainsKey($"{tlink}_{tindex}"))
                     {
-                        if (filtered.Count >= AppInit.settings.rateLimiter.limitStream)
+                        if (filtered.Count >= AppInit.groupSettings(userData.group).rateLimiter.limitStream)
                         {
+                            if (Regex.IsMatch(httpContext.Request.QueryString.Value, "&stat(&|$)"))
+                            {
+                                httpContext.Response.ContentType = "application/json; charset=utf-8";
+                                return httpContext.Response.WriteAsync("{\"stat\":3,\"stat_string\": \"Torrent working\"}", httpContext.RequestAborted);
+                            }
+
+                            if (Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|m3u)(&|$)"))
+                                return httpContext.Response.WriteAsync(string.Empty, httpContext.RequestAborted);
+
                             httpContext.Response.Redirect(AppInit.settings.rateLimiter.urlVideoError);
                             return Task.CompletedTask;
                         }

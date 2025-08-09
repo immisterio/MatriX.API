@@ -96,6 +96,14 @@ namespace MatriX.API
         static (Setting, DateTime) cachesettings = default;
 
         public static Setting settings => cachesettings.Item1;
+
+        public static Setting groupSettings(int group)
+        {
+            if (cachesettings.Item1.groupSetting.TryGetValue(group, out Setting s))
+                return s;
+
+            return cachesettings.Item1;
+        }
         #endregion
 
         #region usersDb.json

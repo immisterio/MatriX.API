@@ -36,7 +36,7 @@ namespace MatriX.API.Models
         {
             get
             {
-                DateTime threshold = DateTime.Now.AddSeconds(-AppInit.settings.rateLimiter.timeout);
+                DateTime threshold = DateTime.Now.AddSeconds(-AppInit.groupSettings(user.group).rateLimiter.timeout);
                 var filtered = new ConcurrentDictionary<string, DateTime>();
                 foreach (var kvp in activeStreams)
                 {

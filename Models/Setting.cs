@@ -60,7 +60,7 @@ namespace MatriX.API.Models
         public byte maxIpToStream { get; set; } = 5;
 
         /// <summary>
-        /// Максимальный размер (например, квота на ресурсы)
+        /// Максимальный размер торрента
         /// </summary>
         public long maxSize { get; set; }
 
@@ -116,5 +116,8 @@ namespace MatriX.API.Models
         /// Список известных прокси-серверов
         /// </summary>
         public HashSet<Known> KnownProxies { get; set; } = new HashSet<Known>();
+
+
+        public Dictionary<int, Setting> groupSetting { get; set; } = new Dictionary<int, Setting>();
     }
 }

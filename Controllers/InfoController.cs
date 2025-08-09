@@ -61,18 +61,20 @@ namespace MatriX.API.Controllers
             memoryCache.TryGetValue($"memKeyLocIP:{u.id}:{DateTime.Now.Hour}", out HashSet<string> ips);
             memoryCache.TryGetValue($"memKeyLocIP:stream:{u.id}:{DateTime.Now.Hour}", out HashSet<string> ips_stream);
 
-            var tinfo = TorAPI.db[u.id];
+            TorAPI.db.TryGetValue(u.id, out var tinfo);
 
-            return Json (new
+            return Json(new
             {
                 u.id,
                 ip = u._ip,
                 ips,
                 ips_stream,
-                activeStreams = tinfo.filteredActiveStreams,
+                activeStreams = tinfo?.filteredActiveStreams,
                 server = string.IsNullOrEmpty(u.server) ? "auto" : AppInit.settings.servers.FirstOrDefault(i => i.host != null && i.host.StartsWith(u.server))?.name ?? "auto",
-                maxiptoIsLockHostOrUser = u.maxiptoIsLockHostOrUser > AppInit.settings.maxiptoIsLockHostOrUser ? u.maxiptoIsLockHostOrUser : AppInit.settings.maxiptoIsLockHostOrUser,
-                maxIpToStream = u.maxIpToStream > AppInit.settings.maxIpToStream ? u.maxIpToStream : AppInit.settings.maxIpToStream,
+                maxiptoIsLockHostOrUser = u.maxiptoIsLockHostOrUser > AppInit.groupSettings(u.group).maxiptoIsLockHostOrUser ? u.maxiptoIsLockHostOrUser : AppInit.groupSettings(u.group).maxiptoIsLockHostOrUser,
+                maxIpToStream = u.maxIpToStream > AppInit.groupSettings(u.group).maxIpToStream ? u.maxIpToStream : AppInit.groupSettings(u.group).maxIpToStream,
+                maxSize = u.maxSize > AppInit.groupSettings(u.group).maxSize ? u.maxSize : AppInit.groupSettings(u.group).maxSize,
+                AppInit.groupSettings(u.group).rateLimiter.limitStream,
                 u.domainid,
                 u.login,
                 u.passwd,
@@ -83,7 +85,6 @@ namespace MatriX.API.Controllers
                 u.allowedToChangeSettings,
                 u.shutdown,
                 u.shared,
-                u.maxSize,
                 u.whiteip,
                 u.expires
             });

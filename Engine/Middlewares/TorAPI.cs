@@ -273,11 +273,11 @@ namespace MatriX.API.Engine.Middlewares
 
                         if (info.user.maxSize > 0)
                             arguments += $" -m {info.user.maxSize}";
-                        else if (AppInit.settings.maxSize > 0 && info.user.maxSize != -1)
-                            arguments += $" -m {AppInit.settings.maxSize}";
+                        else if (AppInit.groupSettings(info.user.group).maxSize > 0 && info.user.maxSize != -1)
+                            arguments += $" -m {AppInit.groupSettings(info.user.group).maxSize}";
 
-                        if (!string.IsNullOrEmpty(AppInit.settings.tsargs))
-                            arguments += $" {AppInit.settings.tsargs.Trim()}";
+                        if (!string.IsNullOrEmpty(AppInit.groupSettings(info.user.group).tsargs ?? AppInit.settings.tsargs))
+                            arguments += $" {(AppInit.groupSettings(info.user.group).tsargs ?? AppInit.settings.tsargs).Trim()}";
 
                         var processInfo = new ProcessStartInfo();
                         processInfo.UseShellExecute = false;
