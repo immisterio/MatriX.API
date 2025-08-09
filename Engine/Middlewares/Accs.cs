@@ -61,6 +61,9 @@ namespace MatriX.API.Engine.Middlewares
                             ushared._ip = clientIp;
                             ushared.id = $"{domainid}/{clientIp.Replace(":", "_")}";
 
+                            if (AppInit.sharedUserToServer.TryGetValue(ushared.id, out string serv))
+                                ushared.server = serv;
+
                             httpContext.Features.Set(ushared);
                             return _next(httpContext);
                         }
@@ -148,6 +151,9 @@ namespace MatriX.API.Engine.Middlewares
                                         var ushared = _u.Clone();
                                         ushared._ip = clientIp;
                                         ushared.id = $"{login}/{clientIp.Replace(":", "_")}";
+
+                                        if (AppInit.sharedUserToServer.TryGetValue(ushared.id, out string serv))
+                                            ushared.server = serv;
 
                                         httpContext.Features.Set(ushared);
                                         return _next(httpContext);

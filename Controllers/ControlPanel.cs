@@ -149,25 +149,33 @@ namespace MatriX.API.Controllers
                 userData.server = server == "auto" ? null : server;
             }
 
-            if (update)
+			if (update)
 			{
-				System.IO.File.WriteAllText($"{AppInit.appfolder}/usersDb.json", JsonConvert.SerializeObject(AppInit.usersDb, Formatting.Indented));
-
-				if (reload && TorAPI.db.TryGetValue(userData.id, out TorInfo info))
+				if (userData.shared)
 				{
-                    info?.Dispose();
-                    TorAPI.db.TryRemove(userData.id, out _);
+					AppInit.sharedUserToServer.AddOrUpdate(userData.id, userData.server, (key, oldValue) => userData.server);
+                    System.IO.File.WriteAllText($"{AppInit.appfolder}/sharedUserToServer.json", JsonConvert.SerializeObject(AppInit.sharedUserToServer, Formatting.Indented));
                 }
-
-				if (reload && !string.IsNullOrEmpty(userData.server) && !RemoteAPI.serv(userData, null, false).Contains("127.0.0.1"))
+				else
 				{
-                    using (var client = new HttpClient())
-                    {
-                        var request = RemoteAPI.CreateProxyHttpRequest(null, new Uri($"{userData.server}/shutdown"), userData);
-                        var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-                    }
-                }
-            }
+					System.IO.File.WriteAllText($"{AppInit.appfolder}/usersDb.json", JsonConvert.SerializeObject(AppInit.usersDb, Formatting.Indented));
+
+					if (reload && TorAPI.db.TryGetValue(userData.id, out TorInfo info))
+					{
+						info?.Dispose();
+						TorAPI.db.TryRemove(userData.id, out _);
+					}
+
+					if (reload && !string.IsNullOrEmpty(userData.server) && !RemoteAPI.serv(userData, null, false).Contains("127.0.0.1"))
+					{
+						using (var client = new HttpClient())
+						{
+							var request = RemoteAPI.CreateProxyHttpRequest(null, new Uri($"{userData.server}/shutdown"), userData);
+							var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+						}
+					}
+				}
+			}
 
             string html = @"
 <!DOCTYPE html>
