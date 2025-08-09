@@ -64,6 +64,8 @@ namespace MatriX.API.Models
         /// </summary>
         public long maxSize { get; set; }
 
+        public string maxSize_urlVideoError { get; set; } = "/error_maxSizelimit.mp4";
+
         public RateLimit rateLimiter { get; set; } = new RateLimit();
 
         /// <summary>
