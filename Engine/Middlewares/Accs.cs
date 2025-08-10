@@ -127,7 +127,7 @@ namespace MatriX.API.Engine.Middlewares
 
                                 bool shutdown = false;
                                 if (httpContext.Request.Headers.ContainsKey("X-shutdown") && bool.TryParse(httpContext.Request.Headers["X-shutdown"].ToString(), out bool _shutdown))
-                                    shared = _shutdown;
+                                    shutdown = _shutdown;
 
                                 int group = 0;
                                 if (httpContext.Request.Headers.ContainsKey("X-group") && int.TryParse(httpContext.Request.Headers["X-group"].ToString(), out int _group))
