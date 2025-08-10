@@ -113,6 +113,10 @@ namespace MatriX.API.Engine.Middlewares
                                 if (httpContext.Request.Headers.ContainsKey("X-maxiptoIsLockHostOrUser") && byte.TryParse(httpContext.Request.Headers["X-maxiptoIsLockHostOrUser"].ToString(), out byte _maxiptoIsLockHostOrUser))
                                     maxiptoIsLockHostOrUser = _maxiptoIsLockHostOrUser;
 
+                                byte maxIpToStream = 0;
+                                if (httpContext.Request.Headers.ContainsKey("X-maxIpToStream") && byte.TryParse(httpContext.Request.Headers["X-maxIpToStream"].ToString(), out byte _maxIpToStream))
+                                    maxIpToStream = _maxIpToStream;
+
                                 bool allowedToChangeSettings = true;
                                 if (httpContext.Request.Headers.ContainsKey("X-allowedToChangeSettings") && bool.TryParse(httpContext.Request.Headers["X-allowedToChangeSettings"].ToString(), out bool _allowedToChangeSettings))
                                     allowedToChangeSettings = _allowedToChangeSettings;
@@ -120,6 +124,10 @@ namespace MatriX.API.Engine.Middlewares
                                 bool shared = false;
                                 if (httpContext.Request.Headers.ContainsKey("X-shared") && bool.TryParse(httpContext.Request.Headers["X-shared"].ToString(), out bool _shared))
                                     shared = _shared;
+
+                                bool shutdown = false;
+                                if (httpContext.Request.Headers.ContainsKey("X-shutdown") && bool.TryParse(httpContext.Request.Headers["X-shutdown"].ToString(), out bool _shutdown))
+                                    shared = _shutdown;
 
                                 int group = 0;
                                 if (httpContext.Request.Headers.ContainsKey("X-group") && int.TryParse(httpContext.Request.Headers["X-group"].ToString(), out int _group))
@@ -136,10 +144,12 @@ namespace MatriX.API.Engine.Middlewares
                                     versionts = httpContext.Request.Headers["X-Versionts"].ToString(),
                                     maxSize = maxSize,
                                     maxiptoIsLockHostOrUser = maxiptoIsLockHostOrUser,
+                                    maxIpToStream = maxIpToStream,
                                     allowedToChangeSettings = allowedToChangeSettings,
                                     shared = shared,
                                     group = group,
-                                    expires = DateTime.Now.AddDays(1)
+                                    expires = DateTime.Now.AddDays(1),
+                                    shutdown = shutdown
                                 });
 
                                 return _next(httpContext);

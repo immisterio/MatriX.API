@@ -1,12 +1,12 @@
 ﻿using MatriX.API.Models;
 using Microsoft.AspNetCore.Http;
-using System.Threading.Tasks;
-using System.IO;
-using System;
 using Microsoft.Extensions.Caching.Memory;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace MatriX.API.Engine.Middlewares
 {
@@ -48,11 +48,7 @@ namespace MatriX.API.Engine.Middlewares
                 ips.Add(user._ip);
                 memoryCache.Set(memKeyLocIP, ips, DateTime.Now.AddHours(1));
 
-                int maxiptoIsLockHostOrUser = AppInit.groupSettings(user.group).maxiptoIsLockHostOrUser;
-                if (user.maxiptoIsLockHostOrUser > 0)
-                    maxiptoIsLockHostOrUser = user.maxiptoIsLockHostOrUser;
-
-                if (ips.Count > maxiptoIsLockHostOrUser)
+                if (ips.Count > Math.Max(AppInit.groupSettings(user.group).maxiptoIsLockHostOrUser, user.maxiptoIsLockHostOrUser))
                     return true;
             }
             else
@@ -78,11 +74,7 @@ namespace MatriX.API.Engine.Middlewares
                     memoryCache.Set(memKeyLocIP, ips, DateTime.Now.AddHours(1));
                 }
 
-                int maxip = AppInit.groupSettings(user.group).maxIpToStream;
-                if (user.maxIpToStream > 0)
-                    maxip = user.maxIpToStream;
-
-                if (ips.Count > maxip)
+                if (ips.Count > Math.Max(AppInit.groupSettings(user.group).maxIpToStream, user.maxIpToStream))
                     return true;
             }
             else
@@ -97,6 +89,19 @@ namespace MatriX.API.Engine.Middlewares
         }
         #endregion
 
+        #region OnError
+        Task OnError(HttpContext httpContext, string msg)
+        {
+            httpContext.Response.StatusCode = 403;
+            httpContext.Response.ContentType = "text/plain; charset=UTF-8";
+
+            if (httpContext.Request.Headers.TryGetValue("X-SlaveName", out var xSlaveName) && !string.IsNullOrEmpty(xSlaveName))
+                return httpContext.Response.WriteAsync(msg + "\n\n" + xSlaveName, httpContext.RequestAborted);
+
+            return httpContext.Response.WriteAsync(msg, httpContext.RequestAborted);
+        }
+        #endregion
+
         public Task InvokeAsync(HttpContext httpContext)
         {
             var userData = httpContext.Features.Get<UserData>();
@@ -106,36 +111,20 @@ namespace MatriX.API.Engine.Middlewares
             if (httpContext.Request.Headers.TryGetValue("User-Agent", out var userAgent))
             {
                 if (Regex.IsMatch(userAgent.ToString(), "(Googlebot|Yandex(bot|Images|Direct)|bingbot|Baiduspider|DuckDuckBot|Slurp)", RegexOptions.IgnoreCase))
-                {
-                    httpContext.Response.StatusCode = 403;
-                    httpContext.Response.ContentType = "text/plain; charset=UTF-8";
-                    return httpContext.Response.WriteAsync("Доступ запрещен для поисковых ботов", httpContext.RequestAborted);
-                }
+                    return OnError(httpContext, "Доступ запрещен для поисковых ботов");
             }
 
             if (userData.expires != default && DateTime.Now > userData.expires)
-            {
-                httpContext.Response.StatusCode = 403;
-                httpContext.Response.ContentType = "text/plain; charset=UTF-8";
-                return httpContext.Response.WriteAsync("Доступ запрещен, причина: дата", httpContext.RequestAborted);
-            }
+                return OnError(httpContext, "Доступ запрещен, причина: дата");
 
             if (AppInit.settings.group > 0 && AppInit.settings.group > userData.group)
-            {
-                httpContext.Response.StatusCode = 403;
-                httpContext.Response.ContentType = "text/plain; charset=UTF-8";
-                return httpContext.Response.WriteAsync($"Доступ запрещен, причина: group {AppInit.settings.group} > {userData.group}", httpContext.RequestAborted);
-            }
+                return OnError(httpContext, $"Доступ запрещен, причина: group {AppInit.settings.group} > {userData.group}");
 
             if (IsWhiteIP(userData._ip) == false)
             {
                 HashSet<string> ips;
                 if (IsLockHostOrUser(userData, out ips) || IsLockStream(httpContext.Request.Path.Value, userData, out ips))
-                {
-                    httpContext.Response.StatusCode = 403;
-                    httpContext.Response.ContentType = "text/plain; charset=UTF-8";
-                    return httpContext.Response.WriteAsync($"Превышено допустимое количество ip. Разбан через {60 - DateTime.Now.Minute} мин.\n\n" + string.Join(", ", ips), httpContext.RequestAborted);
-                }
+                    return OnError(httpContext, $"Превышено допустимое количество ip. Разбан через {60 - DateTime.Now.Minute} мин.\n\n" + string.Join(", ", ips));
             }
 
             if (userData.whiteip != null && userData.whiteip.Count > 0)
@@ -158,9 +147,7 @@ namespace MatriX.API.Engine.Middlewares
                     }
                 }
 
-                httpContext.Response.StatusCode = 403;
-                httpContext.Response.ContentType = "text/plain; charset=UTF-8";
-                return httpContext.Response.WriteAsync($"IP {clientIP} отсутствует в списке разрешенных", httpContext.RequestAborted);
+                return OnError(httpContext, $"IP {clientIP} отсутствует в списке разрешенных");
             }
 
             if (AppInit.settings.onlyRemoteApi == false && httpContext.Request.Path.Value.StartsWith("/stream/"))

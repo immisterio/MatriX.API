@@ -151,8 +151,11 @@ namespace MatriX.API.Engine.Middlewares
             var userData = httpContext.Features.Get<UserData>();
             if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
             {
-                await _next(httpContext);
-                return;
+                if (!httpContext.Request.Path.Value.StartsWith("/userdata/slave"))
+                {
+                    await _next(httpContext);
+                    return;
+                }
             }
 
             if (httpContext.Request.Path.Value.StartsWith("/search"))
@@ -181,6 +184,8 @@ namespace MatriX.API.Engine.Middlewares
                     {
                         if (AppInit.settings.onlyRemoteApi)
                         {
+                            httpContext.Response.StatusCode = 403;
+                            httpContext.Response.ContentType = "text/plain; charset=UTF-8";
                             await httpContext.Response.WriteAsync("no working servers", httpContext.RequestAborted).ConfigureAwait(false);
                             return;
                         }
@@ -193,7 +198,7 @@ namespace MatriX.API.Engine.Middlewares
 
             memory.Set($"RemoteAPI:{userData._ip}", userData, DateTime.Now.AddDays(1));
 
-            string clearPath = HttpUtility.UrlDecode(httpContext.Request.Path.Value);
+            string clearPath = HttpUtility.UrlDecode(httpContext.Request.Path.Value.Replace("/userdata/slave", "/userdata"));
             clearPath = Regex.Replace(clearPath, "[а-яА-Я]", "z");
 
             string clearUri = Regex.Replace(clearPath + httpContext.Request.QueryString.Value, @"[^\x00-\x7F]", "");
@@ -221,7 +226,7 @@ namespace MatriX.API.Engine.Middlewares
 
             using (var client = httpClientFactory.CreateClient("base"))
             {
-                var request = CreateProxyHttpRequest(httpContext, new Uri($"{serip}{clearUri}"), userData);
+                var request = CreateProxyHttpRequest(httpContext, new Uri($"{serip}{clearUri}"), userData, serip);
                 var response = await client.SendAsync(request, httpContext.RequestAborted).ConfigureAwait(false);
 
                 string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -258,7 +263,7 @@ namespace MatriX.API.Engine.Middlewares
 
 
         #region CreateProxyHttpRequest
-        public static HttpRequestMessage CreateProxyHttpRequest(HttpContext context, Uri uri, UserData userData)
+        public static HttpRequestMessage CreateProxyHttpRequest(HttpContext context, Uri uri, UserData userData, string serip)
         {
             var request = context?.Request;
 
@@ -290,14 +295,20 @@ namespace MatriX.API.Engine.Middlewares
                 }
             }
 
+
             requestMessage.Headers.Add("Authorization", "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($"{userData.login ?? userData.domainid}:{userData.passwd ?? "ts"}")));
             requestMessage.Headers.Add("X-group", userData.group.ToString());
             requestMessage.Headers.Add("X-shared", userData.shared.ToString());
             requestMessage.Headers.Add("X-Client-IP", userData._ip);
             requestMessage.Headers.Add("X-Versionts", userData.versionts ?? "latest");
-            requestMessage.Headers.Add("X-maxSize", userData.maxSize.ToString());
-            requestMessage.Headers.Add("X-maxiptoIsLockHostOrUser", userData.maxiptoIsLockHostOrUser.ToString());
+            requestMessage.Headers.Add("X-maxSize", Math.Max(AppInit.groupSettings(userData.group).maxSize, userData.maxSize).ToString());
+            requestMessage.Headers.Add("X-maxiptoIsLockHostOrUser", Math.Max(AppInit.groupSettings(userData.group).maxiptoIsLockHostOrUser, userData.maxiptoIsLockHostOrUser).ToString());
+            requestMessage.Headers.Add("X-maxIpToStream", Math.Max(AppInit.groupSettings(userData.group).maxIpToStream, userData.maxIpToStream).ToString());
             requestMessage.Headers.Add("X-allowedToChangeSettings", userData.allowedToChangeSettings.ToString());
+            requestMessage.Headers.Add("X-shutdown", userData.shutdown.ToString());
+
+            if (AppInit.settings.servers != null)
+                requestMessage.Headers.Add("X-SlaveName", HttpUtility.UrlEncode(AppInit.settings.servers.FirstOrDefault(i => i.host != null && i.host.StartsWith(serip))?.name ?? "unknown"));
 
             requestMessage.Headers.ConnectionClose = false;
             requestMessage.Headers.Host = uri.Authority;
