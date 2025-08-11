@@ -109,7 +109,7 @@ namespace MatriX.API.Engine.Middlewares
         #endregion
 
         #region servHard
-        string servHard(UserData userData, bool isStream)
+        static string servHard(UserData userData, IMemoryCache memory, bool isStream)
         {
             lock (lockObj)
             {
@@ -173,27 +173,19 @@ namespace MatriX.API.Engine.Middlewares
 
             bool isStream = Regex.IsMatch(httpContext.Request.Path.Value, "^/(stream|playlist|play/|download/)");
 
-            string serip = serv(userData, memory, isStream);
-            if (serip.Contains("127.0.0.1"))
+            string serip = СurrentServer(userData, memory, isStream);
+            if (string.IsNullOrEmpty(serip))
             {
-                serip = servHard(userData, isStream);
-                if (string.IsNullOrEmpty(serip))
+                if (AppInit.settings.onlyRemoteApi)
                 {
-                    serip = AppInit.settings.reserve_server;
-                    if (string.IsNullOrEmpty(serip))
-                    {
-                        if (AppInit.settings.onlyRemoteApi)
-                        {
-                            httpContext.Response.StatusCode = 403;
-                            httpContext.Response.ContentType = "text/plain; charset=UTF-8";
-                            await httpContext.Response.WriteAsync("no working servers", httpContext.RequestAborted).ConfigureAwait(false);
-                            return;
-                        }
-
-                        await _next(httpContext);
-                        return;
-                    }
+                    httpContext.Response.StatusCode = 403;
+                    httpContext.Response.ContentType = "text/plain; charset=UTF-8";
+                    await httpContext.Response.WriteAsync("no working servers", httpContext.RequestAborted).ConfigureAwait(false);
+                    return;
                 }
+
+                await _next(httpContext);
+                return;
             }
 
             memory.Set($"RemoteAPI:{userData._ip}", userData, DateTime.Now.AddDays(1));
@@ -307,7 +299,7 @@ namespace MatriX.API.Engine.Middlewares
             requestMessage.Headers.Add("X-allowedToChangeSettings", userData.allowedToChangeSettings.ToString());
             requestMessage.Headers.Add("X-shutdown", userData.shutdown.ToString());
 
-            if (AppInit.settings.servers != null)
+            if (AppInit.settings.servers != null && serip != null)
                 requestMessage.Headers.Add("X-SlaveName", HttpUtility.UrlEncode(AppInit.settings.servers.FirstOrDefault(i => i.host != null && i.host.StartsWith(serip))?.name ?? "unknown"));
 
             requestMessage.Headers.ConnectionClose = false;
@@ -316,6 +308,25 @@ namespace MatriX.API.Engine.Middlewares
             requestMessage.Method = request == null ? new HttpMethod("GET") : new HttpMethod(request.Method);
 
             return requestMessage;
+        }
+        #endregion
+
+        #region СurrentServer
+        public static string СurrentServer(UserData userData, IMemoryCache memory, bool isStream)
+        {
+            string serip = serv(userData, memory, isStream);
+            if (serip.Contains("127.0.0.1"))
+            {
+                serip = servHard(userData, memory, isStream);
+                if (string.IsNullOrEmpty(serip))
+                {
+                    serip = AppInit.settings.reserve_server;
+                    if (string.IsNullOrEmpty(serip))
+                        return null;
+                }
+            }
+
+            return serip;
         }
         #endregion
     }

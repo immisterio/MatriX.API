@@ -3,9 +3,14 @@ using MatriX.API.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace MatriX.API.Controllers
 {
@@ -55,7 +60,7 @@ namespace MatriX.API.Controllers
         public string XRealIP() => HttpContext.Connection.RemoteIpAddress.ToString();
 
         [Route("userdata")]
-        public JsonResult GoUserData() 
+        async public Task<JsonResult> GoUserData() 
         {
             var u = HttpContext.Features.Get<UserData>();
             memoryCache.TryGetValue($"memKeyLocIP:{u.id}:{DateTime.Now.Hour}", out HashSet<string> ips);
@@ -63,14 +68,44 @@ namespace MatriX.API.Controllers
 
             TorAPI.db.TryGetValue(u.id, out var tinfo);
 
+            #region slavedata
+            JObject slavedata = null;
+
+            string currentServer = RemoteAPI.СurrentServer(u, memoryCache, false);
+            if (!string.IsNullOrEmpty(currentServer) && currentServer.StartsWith("http"))
+            {
+                using (var client = new HttpClient())
+                {
+                    var request = RemoteAPI.CreateProxyHttpRequest(null, new Uri($"{currentServer}/userdata"), u, null);
+                    var response = await client.SendAsync(request);
+                    if (response.IsSuccessStatusCode)
+                        slavedata = JsonConvert.DeserializeObject<JObject>(await response.Content.ReadAsStringAsync());
+                }
+            }
+            #endregion
+
+            #region getActiveStreams
+            ConcurrentDictionary<string, DateTime> getActiveStreams()
+            {
+                if (tinfo?.filteredActiveStreams != null)
+                    return tinfo.filteredActiveStreams;
+
+                if (slavedata != null && slavedata.ContainsKey("activeStreams"))
+                    return slavedata["activeStreams"].ToObject<ConcurrentDictionary<string, DateTime>>();
+
+                return null;
+            }
+            #endregion
+
             return Json(new
             {
                 u.id,
                 ip = u._ip,
                 ips,
                 ips_stream,
-                activeStreams = tinfo?.filteredActiveStreams,
+                activeStreams = getActiveStreams(),
                 server = string.IsNullOrEmpty(u.server) ? "auto" : AppInit.settings.servers.FirstOrDefault(i => i.host != null && i.host.StartsWith(u.server))?.name ?? "auto",
+                currentServer = currentServer != null ? AppInit.settings.servers.FirstOrDefault(i => i.host != null && i.host.StartsWith(currentServer))?.name : null,
                 maxiptoIsLockHostOrUser = Math.Max(AppInit.groupSettings(u.group).maxiptoIsLockHostOrUser, u.maxiptoIsLockHostOrUser),
                 maxIpToStream = Math.Max(AppInit.groupSettings(u.group).maxIpToStream, u.maxIpToStream),
                 maxSize = Math.Max(AppInit.groupSettings(u.group).maxSize, u.maxSize),
