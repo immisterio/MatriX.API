@@ -60,7 +60,7 @@ namespace MatriX.API.Controllers
         public string XRealIP() => HttpContext.Connection.RemoteIpAddress.ToString();
 
         [Route("userdata")]
-        async public Task<JsonResult> GoUserData() 
+        async public Task<ActionResult> GoUserData() 
         {
             var u = HttpContext.Features.Get<UserData>();
             memoryCache.TryGetValue($"memKeyLocIP:{u.id}:{DateTime.Now.Hour}", out HashSet<string> ips);
@@ -74,13 +74,18 @@ namespace MatriX.API.Controllers
             string currentServer = RemoteAPI.СurrentServer(u, memoryCache, false);
             if (!string.IsNullOrEmpty(currentServer) && currentServer.StartsWith("http"))
             {
-                using (var client = new HttpClient())
+                try
                 {
-                    var request = RemoteAPI.CreateProxyHttpRequest(null, new Uri($"{currentServer}/userdata"), u, null);
-                    var response = await client.SendAsync(request);
-                    if (response.IsSuccessStatusCode)
-                        slavedata = JsonConvert.DeserializeObject<JObject>(await response.Content.ReadAsStringAsync());
+                    using (var client = new HttpClient())
+                    {
+                        client.Timeout = TimeSpan.FromSeconds(5);
+                        var request = RemoteAPI.CreateProxyHttpRequest(null, new Uri($"{currentServer}/userdata"), u, null);
+                        var response = await client.SendAsync(request);
+                        if (response.IsSuccessStatusCode)
+                            slavedata = JsonConvert.DeserializeObject<JObject>(await response.Content.ReadAsStringAsync());
+                    }
                 }
+                catch { }
             }
             #endregion
 
@@ -97,7 +102,7 @@ namespace MatriX.API.Controllers
             }
             #endregion
 
-            return Json(new
+            return Content(JsonConvert.SerializeObject(new
             {
                 u.id,
                 ip = u._ip,
@@ -122,7 +127,7 @@ namespace MatriX.API.Controllers
                 u.shared,
                 u.whiteip,
                 u.expires
-            });
+            }, Formatting.Indented), "application/javascript; charset=utf-8");
         }
 
         [Route("headers")]

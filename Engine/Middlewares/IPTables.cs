@@ -105,7 +105,7 @@ namespace MatriX.API.Engine.Middlewares
         public Task InvokeAsync(HttpContext httpContext)
         {
             var userData = httpContext.Features.Get<UserData>();
-            if (userData.login == "service" || userData.login == "default" || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
+            if (userData.login == "service" || userData.login == "default" || httpContext.Request.Path.Value.StartsWith("/admin/") || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
                 return _next(httpContext);
 
             if (httpContext.Request.Headers.TryGetValue("User-Agent", out var userAgent))

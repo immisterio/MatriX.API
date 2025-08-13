@@ -141,9 +141,10 @@ namespace MatriX.API
                                     if (response.StatusCode == HttpStatusCode.OK)
                                     {
                                         string echo = await response.Content.ReadAsStringAsync();
-                                        server.status = echo.StartsWith("MatriX.") ? 1 : 2;
+                                        int status = echo.StartsWith("MatriX.") ? 1 : 2;
+                                        int status_hard = 0;
 
-                                        if (server.status == 1 && server.limit != null)
+                                        if (status == 1 && server.limit != null)
                                         {
                                             try
                                             {
@@ -166,35 +167,23 @@ namespace MatriX.API
 
                                                 #region ram
                                                 if (server.limit.ram != 0 && mem > server.limit.ram)
-                                                {
-                                                    server.status = 3;
-                                                    continue;
-                                                }
+                                                    status = 3;
 
                                                 if (server.limit_hard != null)
                                                 {
                                                     if (server.limit_hard.ram != 0 && mem > server.limit_hard.ram)
-                                                    {
-                                                        server.status_hard = 1;
-                                                        continue;
-                                                    }
+                                                        status_hard = 1;
                                                 }
                                                 #endregion
 
                                                 #region cpu
                                                 if (server.limit.cpu != 0 && cpu > server.limit.cpu)
-                                                {
-                                                    server.status = 3;
-                                                    continue;
-                                                }
+                                                    status = 3;
 
                                                 if (server.limit_hard != null)
                                                 {
                                                     if (server.limit_hard.cpu != 0 && cpu > server.limit_hard.cpu)
-                                                    {
-                                                        server.status_hard = 1;
-                                                        continue;
-                                                    }
+                                                        status_hard = 1;
                                                 }
                                                 #endregion
 
@@ -204,23 +193,14 @@ namespace MatriX.API
                                                     if (server.limit.network.all != 0)
                                                     {
                                                         if ((received + transmitted) > server.limit.network.all)
-                                                        {
-                                                            server.status = 3;
-                                                            continue;
-                                                        }
+                                                            status = 3;
                                                     }
 
                                                     if (server.limit.network.transmitted != 0 && transmitted > server.limit.network.transmitted)
-                                                    {
-                                                        server.status = 3;
-                                                        continue;
-                                                    }
+                                                        status = 3;
 
                                                     if (server.limit.network.received != 0 && received > server.limit.network.received)
-                                                    {
-                                                        server.status = 3;
-                                                        continue;
-                                                    }
+                                                        status = 3;
                                                 }
                                                 #endregion
 
@@ -230,28 +210,22 @@ namespace MatriX.API
                                                     if (server.limit_hard.network.all != 0)
                                                     {
                                                         if ((received + transmitted) > server.limit_hard.network.all)
-                                                        {
-                                                            server.status_hard = 1;
-                                                            continue;
-                                                        }
+                                                            status_hard = 1;
                                                     }
 
                                                     if (server.limit_hard.network.transmitted != 0 && transmitted > server.limit_hard.network.transmitted)
-                                                    {
-                                                        server.status_hard = 1;
-                                                        continue;
-                                                    }
+                                                        status_hard = 1;
 
                                                     if (server.limit_hard.network.received != 0 && received > server.limit_hard.network.received)
-                                                    {
-                                                        server.status_hard = 1;
-                                                        continue;
-                                                    }
+                                                        status_hard = 1;
                                                 }
                                                 #endregion
                                             }
                                             catch { }
                                         }
+
+                                        server.status = status;
+                                        server.status_hard = status_hard;
                                     }
                                     else
                                     {
@@ -276,9 +250,9 @@ namespace MatriX.API
 
                     try
                     {
-                        string top = "mem: " + Bash.Run("free -t | awk '/Mem/{printf(\\\"%.0f\\n\\\", ($3-$6)/$2 * 100)}'"); // процент 1-100
+                        string top = "mem: " + Bash.Run("free -t | grep \"Mem:\" | awk '{printf \"%.0f\\n\", $3/$2*100}'"); // процент занятой RAM | 1-100
                         top += "cpu: " + Bash.Run("uptime | grep -o 'load average: .*' | awk -F ', ' '{print $2}'");
-                        top += Bash.Run("sar -n DEV 1 60 | grep Average | grep " + AppInit.settings.interface_network + " | awk '{print \\\"Received: \\\" $5*8/1024 \\\" Mbit/s, Transmitted: \\\" $6*8/1024 \\\" Mbit/s\\\"}'");
+                        top += Bash.Run($"sar -n DEV 1 60 | grep Average | grep \" {AppInit.settings.interface_network} \" | awk '{{print \\\"Received: \\\" $5*8/1024 \\\" Mbit/s, Transmitted: \\\" $6*8/1024 \\\" Mbit/s\\\"}}'");
 
                         AppInit.top = top;
                     }

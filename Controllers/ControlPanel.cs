@@ -107,9 +107,27 @@ namespace MatriX.API.Controllers
 					if (server.group == userData.group || (server.groups != null && server.groups.Contains(userData.group)))
 					{
 						string _checked = server.host == userData.server ? "checked" : "";
-						string _status = (server.status == 1 || (server.status == 3 && server.limit_hard != null && server.status_hard != 1)) ? "<b style=\"color: green;\">work</b>" : "<b style=\"color: crimson;\">shutdown</b>";
+						string _status = $"<b style=\"color: crimson;\">{server.status} / {server.status_hard}</b>";
 
-						html_servers += $"<div class=\"flex\"><input type=\"radio\" name=\"server\" value=\"{server.host}\" {_checked} /> {server.name}&nbsp; - &nbsp;{_status}</div>";
+						switch (server.status)
+						{
+							case 0:
+                                _status = "<b style=\"color: chocolate;\">not checked</b>";
+                                break;
+                            case 1:
+                                _status = "<b style=\"color: green;\">work</b>";
+                                break;
+                            case 2:
+                                _status = "<b style=\"color: crimson;\">shutdown</b>";
+                                break;
+                            case 3:
+                                _status = "<b style=\"color: crimson;\">overloaded</b>";
+                                if (server.limit_hard != null && server.status_hard != 1)
+                                    _status = "<b style=\"color: chocolate;\">hard</b>";
+                                break;
+                        }
+
+                        html_servers += $"<div class=\"flex\"><input type=\"radio\" name=\"server\" value=\"{server.host}\" {_checked} /> {server.name}&nbsp; - &nbsp;{_status}</div>";
 					}
 				}
 			}

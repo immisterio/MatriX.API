@@ -141,7 +141,7 @@ namespace MatriX.API.Engine.Middlewares
             }
 
             var userData = httpContext.Features.Get<UserData>();
-            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
+            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/admin/") || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
             {
                 await _next(httpContext);
                 return;

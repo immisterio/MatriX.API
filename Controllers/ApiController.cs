@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using MatriX.API.Models;
 using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
 
 namespace MatriX.API.Controllers
 {
@@ -18,6 +19,7 @@ namespace MatriX.API.Controllers
         }
 
 
+        #region UpdateUsersdb
         [HttpPost]
         [Route("api/users/updatedb")]
         public ActionResult UpdateUsersdb([FromBody] List<UserData> updatedUsers)
@@ -60,6 +62,21 @@ namespace MatriX.API.Controllers
 
             return Ok();
         }
+        #endregion
+
+        #region servers
+        [Route("admin/servers")]
+        public ActionResult Servers()
+        {
+            var userData = HttpContext.Features.Get<UserData>();
+            if (userData == null || !userData.admin)
+                return Content("not admin");
+
+            return Content(JsonConvert.SerializeObject(AppInit.settings.servers, Formatting.Indented), "application/javascript; charset=utf-8");
+        }
+        #endregion
+
+
 
         // Вспомогательный метод для получения значения по умолчанию для типа
         private static object GetDefault(Type type)
