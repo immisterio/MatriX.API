@@ -105,6 +105,7 @@ namespace MatriX.API.Controllers
             {
                 u.id,
                 ip = u._ip,
+                geo = GeoIP2.Country(u._ip),
                 ips,
                 ips_stream,
                 activeStreams = getActiveStreams(),

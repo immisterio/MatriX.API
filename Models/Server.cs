@@ -1,4 +1,6 @@
-﻿namespace MatriX.API.Models
+﻿using System.Collections.Generic;
+
+namespace MatriX.API.Models
 {
     public class Server
     {
@@ -20,7 +22,7 @@
 
         public string host { get; set; }
 
-        public string[] geo_hide { get; set; }
+        public List<string> geo_hide { get; set; }
 
 
         /// <summary>
