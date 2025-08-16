@@ -1,4 +1,4 @@
-﻿using MatriX.API.Engine.Middlewares;
+﻿using MatriX.API.Middlewares;
 using MatriX.API.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

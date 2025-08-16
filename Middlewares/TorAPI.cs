@@ -18,7 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
-namespace MatriX.API.Engine.Middlewares
+namespace MatriX.API.Middlewares
 {
     public class TorAPI
     {
@@ -598,7 +598,7 @@ namespace MatriX.API.Engine.Middlewares
                 {
                     try
                     {
-                        if (DateTime.Now > endTimeCheckort || (info != null && info.thread == null))
+                        if (DateTime.Now > endTimeCheckort || info != null && info.thread == null)
                             break;
 
                         await Task.Delay(50);

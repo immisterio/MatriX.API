@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace MatriX.API.Engine
+namespace MatriX.API
 {
     public static class Bash
     {

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
 
-namespace MatriX.API.Engine.Middlewares
+namespace MatriX.API.Middlewares
 {
     public class ModHeaders
     {

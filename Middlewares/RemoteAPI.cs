@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Web;
 
-namespace MatriX.API.Engine.Middlewares
+namespace MatriX.API.Middlewares
 {
     public class RemoteAPI
     {
@@ -40,13 +40,13 @@ namespace MatriX.API.Engine.Middlewares
             {
                 // список активных серверов
                 Server[] servers = AppInit.settings.servers?.Where(i =>
-                    i.enable && (i.group == userData.group || (i.groups != null && i.groups.Contains(userData.group)))
+                    i.enable && (i.group == userData.group || i.groups != null && i.groups.Contains(userData.group))
                 )?.ToArray();
 
 
                 if (!string.IsNullOrEmpty(userData.server) && servers != null)
                 {
-                    if (servers.FirstOrDefault(i => i.host == userData.server && (i.status == 1 || (i.status == 3 && i.limit_hard != null && i.status_hard != 1))) != null)
+                    if (servers.FirstOrDefault(i => i.host == userData.server && (i.status == 1 || i.status == 3 && i.limit_hard != null && i.status_hard != 1)) != null)
                         return userData.server;
                 }
 
@@ -116,7 +116,7 @@ namespace MatriX.API.Engine.Middlewares
                 // рабочие сервера с лимитом нагрузки, но не перегружены в limit_hard
                 Server[] working_servers = AppInit.settings.servers?.Where(i =>
                     i.enable && i.status == 3 && i.limit_hard != null && i.status_hard != 1 && 
-                    (i.group == userData.group || (i.groups != null && i.groups.Contains(userData.group)))
+                    (i.group == userData.group || i.groups != null && i.groups.Contains(userData.group))
                 )?.ToArray();
 
                 if (working_servers == null || working_servers.Length == 0)

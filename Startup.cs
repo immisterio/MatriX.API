@@ -1,4 +1,4 @@
-using MatriX.API.Engine.Middlewares;
+using MatriX.API.Middlewares;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;

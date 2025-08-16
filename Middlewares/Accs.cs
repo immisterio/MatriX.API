@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace MatriX.API.Engine.Middlewares
+namespace MatriX.API.Middlewares
 {
     public class Accs
     {

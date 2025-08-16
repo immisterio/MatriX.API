@@ -4,11 +4,10 @@ using System.Net;
 using System.Text.RegularExpressions;
 using MatriX.API.Models;
 using System.Threading;
-using MatriX.API.Engine.Middlewares;
 using System;
 using System.Threading.Tasks;
 using System.Net.Http;
-using MatriX.API.Engine;
+using MatriX.API.Middlewares;
 
 namespace MatriX.API
 {
@@ -108,12 +107,9 @@ namespace MatriX.API
             #region check servers
             ThreadPool.QueueUserWorkItem(async _ =>
             {
-                bool firstwhile = true;
-
                 while (true)
                 {
-                    await Task.Delay(firstwhile ? TimeSpan.FromSeconds(5) : TimeSpan.FromMinutes(1));
-                    firstwhile = false;
+                    await Task.Delay(TimeSpan.FromSeconds(5));
 
                     try
                     {
@@ -151,75 +147,75 @@ namespace MatriX.API
                                                 response = await client.GetAsync($"{server.host}/top");
                                                 string top = await response.Content.ReadAsStringAsync();
 
-                                                if (top == null || !top.Contains("mem:"))
-                                                    continue;
-
-                                                int.TryParse(Regex.Match(top, "mem: ([0-9]+)").Groups[1].Value, out int mem);
-                                                int.TryParse(Regex.Match(top, "cpu: ([0-9]+)").Groups[1].Value, out int cpu);
-
-                                                int.TryParse(Regex.Match(top, "Received: ([0-9]+)").Groups[1].Value, out int received);
-                                                if (0 > received)
-                                                    received = 0;
-
-                                                int.TryParse(Regex.Match(top, "Transmitted: ([0-9]+)").Groups[1].Value, out int transmitted);
-                                                if (0 > transmitted)
-                                                    transmitted = 0;
-
-                                                #region ram
-                                                if (server.limit.ram != 0 && mem > server.limit.ram)
-                                                    status = 3;
-
-                                                if (server.limit_hard != null)
+                                                if (top != null && top.Contains("mem:"))
                                                 {
-                                                    if (server.limit_hard.ram != 0 && mem > server.limit_hard.ram)
-                                                        status_hard = 1;
-                                                }
-                                                #endregion
+                                                    int.TryParse(Regex.Match(top, "mem: ([0-9]+)").Groups[1].Value, out int mem);
+                                                    int.TryParse(Regex.Match(top, "cpu: ([0-9]+)").Groups[1].Value, out int cpu);
 
-                                                #region cpu
-                                                if (server.limit.cpu != 0 && cpu > server.limit.cpu)
-                                                    status = 3;
+                                                    int.TryParse(Regex.Match(top, "Received: ([0-9]+)").Groups[1].Value, out int received);
+                                                    if (0 > received)
+                                                        received = 0;
 
-                                                if (server.limit_hard != null)
-                                                {
-                                                    if (server.limit_hard.cpu != 0 && cpu > server.limit_hard.cpu)
-                                                        status_hard = 1;
-                                                }
-                                                #endregion
+                                                    int.TryParse(Regex.Match(top, "Transmitted: ([0-9]+)").Groups[1].Value, out int transmitted);
+                                                    if (0 > transmitted)
+                                                        transmitted = 0;
 
-                                                #region network
-                                                if (server.limit.network != null)
-                                                {
-                                                    if (server.limit.network.all != 0)
-                                                    {
-                                                        if ((received + transmitted) > server.limit.network.all)
-                                                            status = 3;
-                                                    }
-
-                                                    if (server.limit.network.transmitted != 0 && transmitted > server.limit.network.transmitted)
+                                                    #region ram
+                                                    if (server.limit.ram != 0 && mem > server.limit.ram)
                                                         status = 3;
 
-                                                    if (server.limit.network.received != 0 && received > server.limit.network.received)
-                                                        status = 3;
-                                                }
-                                                #endregion
-
-                                                #region network_hard
-                                                if (server.limit_hard != null && server.limit_hard.network != null)
-                                                {
-                                                    if (server.limit_hard.network.all != 0)
+                                                    if (server.limit_hard != null)
                                                     {
-                                                        if ((received + transmitted) > server.limit_hard.network.all)
+                                                        if (server.limit_hard.ram != 0 && mem > server.limit_hard.ram)
                                                             status_hard = 1;
                                                     }
+                                                    #endregion
 
-                                                    if (server.limit_hard.network.transmitted != 0 && transmitted > server.limit_hard.network.transmitted)
-                                                        status_hard = 1;
+                                                    #region cpu
+                                                    if (server.limit.cpu != 0 && cpu > server.limit.cpu)
+                                                        status = 3;
 
-                                                    if (server.limit_hard.network.received != 0 && received > server.limit_hard.network.received)
-                                                        status_hard = 1;
+                                                    if (server.limit_hard != null)
+                                                    {
+                                                        if (server.limit_hard.cpu != 0 && cpu > server.limit_hard.cpu)
+                                                            status_hard = 1;
+                                                    }
+                                                    #endregion
+
+                                                    #region network
+                                                    if (server.limit.network != null)
+                                                    {
+                                                        if (server.limit.network.all != 0)
+                                                        {
+                                                            if ((received + transmitted) > server.limit.network.all)
+                                                                status = 3;
+                                                        }
+
+                                                        if (server.limit.network.transmitted != 0 && transmitted > server.limit.network.transmitted)
+                                                            status = 3;
+
+                                                        if (server.limit.network.received != 0 && received > server.limit.network.received)
+                                                            status = 3;
+                                                    }
+                                                    #endregion
+
+                                                    #region network_hard
+                                                    if (server.limit_hard != null && server.limit_hard.network != null)
+                                                    {
+                                                        if (server.limit_hard.network.all != 0)
+                                                        {
+                                                            if ((received + transmitted) > server.limit_hard.network.all)
+                                                                status_hard = 1;
+                                                        }
+
+                                                        if (server.limit_hard.network.transmitted != 0 && transmitted > server.limit_hard.network.transmitted)
+                                                            status_hard = 1;
+
+                                                        if (server.limit_hard.network.received != 0 && received > server.limit_hard.network.received)
+                                                            status_hard = 1;
+                                                    }
+                                                    #endregion
                                                 }
-                                                #endregion
                                             }
                                             catch { }
                                         }
@@ -250,9 +246,9 @@ namespace MatriX.API
 
                     try
                     {
-                        string top = "mem: " + Bash.Run("free -t | grep \"Mem:\" | awk '{printf \"%.0f\\n\", $3/$2*100}'"); // процент занятой RAM | 1-100
+                        string top = "mem: " + Bash.Run("free -t | grep \"Mem:\" | awk '{printf \\\"%.0f\\n\\\", $3/$2*100}'"); // процент занятой RAM | 1-100
                         top += "cpu: " + Bash.Run("uptime | grep -o 'load average: .*' | awk -F ', ' '{print $2}'");
-                        top += Bash.Run($"sar -n DEV 1 60 | grep Average | grep \" {AppInit.settings.interface_network} \" | awk '{{print \\\"Received: \\\" $5*8/1024 \\\" Mbit/s, Transmitted: \\\" $6*8/1024 \\\" Mbit/s\\\"}}'");
+                        top += Bash.Run($"sar -n DEV 1 60 | grep Average | egrep [[:space:]]{AppInit.settings.interface_network}[[:space:]] | awk '{{print \\\"Received: \\\" $5*8/1024 \\\" Mbit/s, Transmitted: \\\" $6*8/1024 \\\" Mbit/s\\\"}}'");
 
                         AppInit.top = top;
                     }

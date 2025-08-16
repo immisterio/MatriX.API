@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 
-namespace MatriX.API.Engine.Middlewares
+namespace MatriX.API.Middlewares
 {
     public static class Extensions
     {
