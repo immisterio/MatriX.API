@@ -20,6 +20,8 @@
 
         public string host { get; set; }
 
+        public string[] geo_hide { get; set; }
+
 
         /// <summary>
         /// 0 - не проверялся

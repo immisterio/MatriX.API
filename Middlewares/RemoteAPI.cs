@@ -34,13 +34,15 @@ namespace MatriX.API.Middlewares
         #endregion
 
         #region serv
-        public static string serv(UserData userData, IMemoryCache mem, bool isStream)
+        static string serv(UserData userData, string geo, IMemoryCache mem, bool isStream)
         {
             lock (lockObj)
             {
                 // список активных серверов
                 Server[] servers = AppInit.settings.servers?.Where(i =>
                     i.enable && (i.group == userData.group || i.groups != null && i.groups.Contains(userData.group))
+                )?.Where(i =>
+                    i.geo_hide == null || geo == null || !i.geo_hide.Contains(geo)
                 )?.ToArray();
 
 
@@ -109,7 +111,7 @@ namespace MatriX.API.Middlewares
         #endregion
 
         #region servHard
-        static string servHard(UserData userData, IMemoryCache memory, bool isStream)
+        static string servHard(UserData userData, string geo, IMemoryCache memory, bool isStream)
         {
             lock (lockObj)
             {
@@ -117,6 +119,8 @@ namespace MatriX.API.Middlewares
                 Server[] working_servers = AppInit.settings.servers?.Where(i =>
                     i.enable && i.status == 3 && i.limit_hard != null && i.status_hard != 1 && 
                     (i.group == userData.group || i.groups != null && i.groups.Contains(userData.group))
+                )?.Where(i =>
+                    i.geo_hide == null || geo == null || !i.geo_hide.Contains(geo)
                 )?.ToArray();
 
                 if (working_servers == null || working_servers.Length == 0)
@@ -314,10 +318,11 @@ namespace MatriX.API.Middlewares
         #region СurrentServer
         public static string СurrentServer(UserData userData, IMemoryCache memory, bool isStream)
         {
-            string serip = serv(userData, memory, isStream);
+            string geo = GeoIP2.Country(userData._ip);
+            string serip = serv(userData, geo, memory, isStream);
             if (serip.Contains("127.0.0.1"))
             {
-                serip = servHard(userData, memory, isStream);
+                serip = servHard(userData, geo, memory, isStream);
                 if (string.IsNullOrEmpty(serip))
                 {
                     serip = AppInit.settings.reserve_server;

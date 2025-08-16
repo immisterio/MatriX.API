@@ -18,8 +18,7 @@ namespace MatriX.API.Controllers
     {
         IMemoryCache memoryCache;
 
-        public InfoController(IMemoryCache m)
-        {
+        public InfoController(IMemoryCache m) {
             memoryCache = m;
         }
 

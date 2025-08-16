@@ -1,18 +1,25 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MatriX.API.Middlewares;
 using MatriX.API.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
+using Newtonsoft.Json;
+using System;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
 using System.Net.Http;
-using System;
 using System.Threading.Tasks;
-using MatriX.API.Middlewares;
 
 namespace MatriX.API.Controllers
 {
     public class ControlPanel : Controller
     {
+        IMemoryCache memoryCache;
+
+        public ControlPanel(IMemoryCache m) {
+            memoryCache = m;
+        }
+
         [Route("control")]
         public ActionResult Index()
         {
@@ -99,9 +106,14 @@ namespace MatriX.API.Controllers
 
             if (AppInit.settings.servers != null)
 			{
-				foreach (var server in AppInit.settings.servers)
+				string geo = GeoIP2.Country(userData._ip);
+
+                foreach (var server in AppInit.settings.servers)
                 {
 					if (!server.enable)
+						continue;
+
+					if (geo != null && server.geo_hide != null && server.geo_hide.Contains(geo))
 						continue;
 
 					if (server.group == userData.group || (server.groups != null && server.groups.Contains(userData.group)))
@@ -184,13 +196,18 @@ namespace MatriX.API.Controllers
 						TorAPI.db.TryRemove(userData.id, out _);
 					}
 
-					if (reload && !string.IsNullOrEmpty(userData.server) && !RemoteAPI.serv(userData, null, false).Contains("127.0.0.1"))
+					if (reload && !string.IsNullOrEmpty(userData.server))
 					{
-						using (var client = new HttpClient())
-						{
-							var request = RemoteAPI.CreateProxyHttpRequest(null, new Uri($"{userData.server}/shutdown"), userData, userData.server);
-							var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-						}
+						string serv = RemoteAPI.СurrentServer(userData, memoryCache, false);
+
+                        if (serv != null && !serv.Contains("127.0.0.1"))
+                        {
+                            using (var client = new HttpClient())
+                            {
+                                var request = RemoteAPI.CreateProxyHttpRequest(null, new Uri($"{userData.server}/shutdown"), userData, userData.server);
+                                var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                            }
+                        }
 					}
 				}
 			}
