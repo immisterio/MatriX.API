@@ -28,6 +28,7 @@ curl -s https://raw.githubusercontent.com/immisterio/MatriX.API/master/install.s
 * server - адрес сервера, пользователь может выбрать в matrix.io/control
 * expires - ограничения доступа по времени
 * maxiptoIsLockHostOrUser - переопределение maxiptoIsLockHostOrUser из settings.json
+* maxIpToStream - переопределение maxIpToStream из settings.json
 * admin - true/false
 
 # Переменные settings.json
@@ -35,6 +36,7 @@ curl -s https://raw.githubusercontent.com/immisterio/MatriX.API/master/install.s
 * IPAddressAny - true ip:port / false 127.0.0.1:port
 * worknodetominutes - время работы ts с момента последней активности пользователя
 * maxiptoIsLockHostOrUser - максимальной количество IP в час на пользователя
+* maxIpToStream - максимальное количество IP в час на пользователя для стриминга
 * domainid_pattern - поиск domainid для доступа без авторизации, "^([^\\.])\\.matrix.io" / ogurchik.matrix.io
 * domainid_api - домен для авторизации по login/passwd, "matrix.io"
 * AuthorizationRequired - true доступ для пользователей usersDb.json / false любой логин и пароль
@@ -43,16 +45,24 @@ curl -s https://raw.githubusercontent.com/immisterio/MatriX.API/master/install.s
 * AuthorizationServerAPI - ip сервера с которого разрешены API запросы
 * interface_network - имя интерфейса для статистики нагрузки на канал (по умолчанию eth0)
 * group - минимальная группа пользователя для доступа к серверу
+* groupSettings - настройки сервера в зависимости от группы пользователя
+* rateLimiter - лимит видеопотоков для пользователей
+  * timeout - время в секундах, после которого сбрасывается лимит
+  * limitStream - количество потоков в час на пользователя
+  * urlVideoError - адрес видео ошибки при превышении лимита
 
 # Переменные servers в settings.json
 * enable - true/false
 * reserve - резервный сервер, участвует только если основные перегружены или недоступны (true/false)
 * workinghours - время когда сервер доступен 
-* limit - лимиты cpu/ram/network при достижении которых сервер перестает принимать новые запросы
+* limit - лимиты cpu/ram/network при достижении которых сервер перестает принимать запросы
+* limit_hard - жесткие лимиты cpu/ram/network если свободных серверов в рамках limit нету
 * name - отображаемое имя сервера в matrix.io/control
 * host - адрес сервера http://IP:PORT | https://domain.io | etc
 * group - группа пользователя которым доступен сервер
 * groups - группы пользователя которым доступен сервер
+* weight - вес сервера, используется для балансировки нагрузки между серверами
+* geo_hide - не использовать сервер для указанных геолокации пользователя
 
 # Пример servers в settings.json
 ```
@@ -120,7 +130,12 @@ Germany, Amsterdam, reserve
   "IPAddressAny": true,
   "worknodetominutes": 4,
   "maxiptoIsLockHostOrUser": 10,
-  "AuthorizationServerAPI": "33.33.33.33"
+  "AuthorizationServerAPI": "33.33.33.33",
+  "rateLimiter": {
+    "timeout": 10,
+    "limitStream": 4,
+    "urlVideoError": "/error_ratelimit.mp4"
+  }
 }
 ```
 
