@@ -90,6 +90,16 @@ namespace MatriX.API.Middlewares
             }
             else 
             {
+                if (httpContext.Request.Path.Value.StartsWith("/readbytes/"))
+                {
+                    httpContext.Features.Set(new UserData()
+                    {
+                        login = "service"
+                    });
+
+                    return _next(httpContext);
+                }
+
                 #region Авторизация по логину и паролю
                 if (httpContext.Request.Headers.TryGetValue("Authorization", out var Authorization))
                 {

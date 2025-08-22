@@ -1,13 +1,15 @@
+using MatriX.API.Middlewares;
+using MatriX.API.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
-using System.Net;
-using System.Text.RegularExpressions;
-using MatriX.API.Models;
-using System.Threading;
+using Newtonsoft.Json;
 using System;
-using System.Threading.Tasks;
+using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Http;
-using MatriX.API.Middlewares;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MatriX.API
 {
@@ -116,6 +118,8 @@ namespace MatriX.API
                         if (AppInit.settings.servers == null)
                             continue;
 
+                        ConcurrentDictionary<string, ulong> readBytesToHour = null;
+
                         foreach (var server in AppInit.settings.servers)
                         {
                             try
@@ -139,6 +143,24 @@ namespace MatriX.API
                                         string echo = await response.Content.ReadAsStringAsync();
                                         int status = echo.StartsWith("MatriX.") ? 1 : 2;
                                         int status_hard = 0;
+
+                                        #region update readbytes
+                                        if (status == 1)
+                                        {
+                                            if (readBytesToHour == null)
+                                                readBytesToHour = new ConcurrentDictionary<string, ulong>();
+
+                                            try
+                                            {
+                                                response = await client.GetAsync($"{server.host}/readbytes/hour");
+                                                string rbth = await response.Content.ReadAsStringAsync();
+
+                                                foreach (var kvp in JsonConvert.DeserializeObject<ConcurrentDictionary<string, ulong>>(rbth))
+                                                    readBytesToHour.AddOrUpdate(kvp.Key, kvp.Value, (k, v) => v + kvp.Value);
+                                            }
+                                            catch { }
+                                        }
+                                        #endregion
 
                                         if (status == 1 && server.limit != null)
                                         {
@@ -231,6 +253,9 @@ namespace MatriX.API
                             }
                             catch { server.status = 2; }
                         }
+
+                        if (readBytesToHour != null)
+                            AppInit.ReadBytesToHour = readBytesToHour;
                     }
                     catch { }
                 }

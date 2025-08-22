@@ -44,7 +44,7 @@ namespace MatriX.API.Controllers
                     foreach (var prop in typeof(UserData).GetProperties())
                     {
                         var newValue = prop.GetValue(updatedUser);
-                        if (newValue != null && !Equals(newValue, GetDefault(prop.PropertyType)))
+                        if (newValue != null && !Equals(newValue, prop.PropertyType.IsValueType ? Activator.CreateInstance(prop.PropertyType) : null))
                         {
                             prop.SetValue(existingUser, newValue);
                         }
@@ -75,13 +75,5 @@ namespace MatriX.API.Controllers
             return Content(JsonConvert.SerializeObject(AppInit.settings.servers, Formatting.Indented), "application/javascript; charset=utf-8");
         }
         #endregion
-
-
-
-        // Вспомогательный метод для получения значения по умолчанию для типа
-        private static object GetDefault(Type type)
-        {
-            return type.IsValueType ? Activator.CreateInstance(type) : null;
-        }
     }
 }

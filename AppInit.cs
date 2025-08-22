@@ -11,6 +11,8 @@ namespace MatriX.API
 {
     public class AppInit
     {
+        public static ConcurrentDictionary<string, ulong> ReadBytesToHour = new ConcurrentDictionary<string, ulong>();
+
         public static bool Win32NT => Environment.OSVersion.Platform == PlatformID.Win32NT;
 
         public static string appfolder = Directory.GetCurrentDirectory();
@@ -92,6 +94,15 @@ namespace MatriX.API
                     await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
                     updateSettings();
                     updateUsers();
+                }
+            });
+
+            ThreadPool.QueueUserWorkItem(async _ =>
+            {
+                while (true)
+                {
+                    await Task.Delay(TimeSpan.FromHours(1)).ConfigureAwait(false);
+                    ReadBytesToHour.Clear();
                 }
             });
         }

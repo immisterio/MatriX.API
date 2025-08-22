@@ -68,6 +68,10 @@ namespace MatriX.API.Models
 
         public RateLimit rateLimiter { get; set; } = new RateLimit();
 
+        public ulong maxReadBytesToHour { get; set; }
+
+        public string maxReadBytes_urlVideoError { get; set; } = "/error_maxReadBytes.mp4";
+
         /// <summary>
         /// Шаблон domainid для доступа без авторизации, например "^([^\\.]{8})\\." для ogurchik.matrix.io
         /// </summary>

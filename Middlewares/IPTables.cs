@@ -7,6 +7,7 @@ using System.IO;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace MatriX.API.Middlewares
 {
@@ -96,7 +97,7 @@ namespace MatriX.API.Middlewares
             httpContext.Response.ContentType = "text/plain; charset=UTF-8";
 
             if (httpContext.Request.Headers.TryGetValue("X-SlaveName", out var xSlaveName) && !string.IsNullOrEmpty(xSlaveName))
-                return httpContext.Response.WriteAsync(msg + "\n\n" + xSlaveName, httpContext.RequestAborted);
+                return httpContext.Response.WriteAsync(msg + " - slave: " + HttpUtility.UrlDecode(xSlaveName), httpContext.RequestAborted);
 
             return httpContext.Response.WriteAsync(msg, httpContext.RequestAborted);
         }
@@ -105,7 +106,7 @@ namespace MatriX.API.Middlewares
         public Task InvokeAsync(HttpContext httpContext)
         {
             var userData = httpContext.Features.Get<UserData>();
-            if (userData.login == "service" || userData.login == "default" || httpContext.Request.Path.Value.StartsWith("/admin/") || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
+            if (userData.login == "service" || userData.login == "default" || httpContext.Request.Path.Value.StartsWith("/readbytes/") || httpContext.Request.Path.Value.StartsWith("/admin/") || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
                 return _next(httpContext);
 
             if (httpContext.Request.Headers.TryGetValue("User-Agent", out var userAgent))

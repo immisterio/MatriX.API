@@ -141,7 +141,7 @@ namespace MatriX.API.Middlewares
             }
 
             var userData = httpContext.Features.Get<UserData>();
-            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/admin/") || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
+            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/readbytes/") || httpContext.Request.Path.Value.StartsWith("/admin/") || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
             {
                 await _next(httpContext);
                 return;
@@ -433,6 +433,15 @@ namespace MatriX.API.Middlewares
                 await httpContext.Response.WriteAsync("OK", httpContext.RequestAborted).ConfigureAwait(false);
                 return;
             }
+
+            #region maxReadBytesToHour
+            ulong maxReadBytes = AppInit.groupSettings(info.user.group).maxReadBytesToHour;
+            if (maxReadBytes > 0 && AppInit.ReadBytesToHour.TryGetValue(info.user.id, out ulong _readBytes) && _readBytes > maxReadBytes)
+            {
+                httpContext.Response.Redirect(AppInit.settings.maxReadBytes_urlVideoError);
+                return;
+            }
+            #endregion
 
             #region Отправляем запрос в torrserver
             string clearPath = HttpUtility.UrlDecode(httpContext.Request.Path.Value);
@@ -735,6 +744,7 @@ namespace MatriX.API.Middlewares
                         if (!string.IsNullOrEmpty(tlink))
                             info.activeStreams[$"{tlink}_{tindex}"] = DateTime.Now;
 
+                        AppInit.ReadBytesToHour.AddOrUpdate(info.user.id, (ulong)bytesRead, (k, v) => v + (ulong)bytesRead);
                         await response.Body.WriteAsync(memoryBuffer.Slice(0, bytesRead), context.RequestAborted).ConfigureAwait(false);
                     }
                 }

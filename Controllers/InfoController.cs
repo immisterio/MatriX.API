@@ -16,13 +16,15 @@ namespace MatriX.API.Controllers
 {
     public class InfoController : Controller
     {
+        #region InfoController
         IMemoryCache memoryCache;
 
         public InfoController(IMemoryCache m) {
             memoryCache = m;
         }
+        #endregion
 
-
+        #region TorInfo
         [Route("torinfo")]
         public ActionResult TorInfo()
         {
@@ -50,7 +52,22 @@ namespace MatriX.API.Controllers
 
             return Json(newinfo);
         }
+        #endregion
 
+        #region ReadBytesHour
+        [Route("readbytes/hour")]
+        public ActionResult ReadBytesHour()
+        {
+            var userData = HttpContext.Features.Get<UserData>();
+            if (AppInit.settings.AuthorizationServerAPI != HttpContext.Connection.RemoteIpAddress.ToString())
+            {
+                if (userData == null || !userData.admin)
+                    return Content("not admin");
+            }
+
+            return Json(AppInit.ReadBytesToHour);
+        }
+        #endregion
 
         [Route("top")]
         public string Top() => AppInit.top;
@@ -66,6 +83,7 @@ namespace MatriX.API.Controllers
             memoryCache.TryGetValue($"memKeyLocIP:stream:{u.id}:{DateTime.Now.Hour}", out HashSet<string> ips_stream);
 
             TorAPI.db.TryGetValue(u.id, out var tinfo);
+            AppInit.ReadBytesToHour.TryGetValue(u.id, out ulong readBytes);
 
             #region slavedata
             JObject slavedata = null;
@@ -104,13 +122,16 @@ namespace MatriX.API.Controllers
             return Content(JsonConvert.SerializeObject(new
             {
                 u.id,
-                ip = u._ip,
+                readBytes,
+                readBytes_slave = slavedata != null ? slavedata.Value<ulong>("readBytes") : 0,
                 geo = GeoIP2.Country(u._ip),
+                ip = u._ip,
                 ips,
                 ips_stream,
                 activeStreams = getActiveStreams(),
                 server = string.IsNullOrEmpty(u.server) ? "auto" : AppInit.settings.servers.FirstOrDefault(i => i.host != null && i.host.StartsWith(u.server))?.name ?? "auto",
                 currentServer = currentServer != null ? AppInit.settings.servers.FirstOrDefault(i => i.host != null && i.host.StartsWith(currentServer))?.name : null,
+                AppInit.groupSettings(u.group).maxReadBytesToHour,
                 maxiptoIsLockHostOrUser = Math.Max(AppInit.groupSettings(u.group).maxiptoIsLockHostOrUser, u.maxiptoIsLockHostOrUser),
                 maxIpToStream = Math.Max(AppInit.groupSettings(u.group).maxIpToStream, u.maxIpToStream),
                 maxSize = Math.Max(AppInit.groupSettings(u.group).maxSize, u.maxSize),

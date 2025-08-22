@@ -40,7 +40,7 @@ namespace MatriX.API.Middlewares
             {
                 // список активных серверов
                 Server[] servers = AppInit.settings.servers?.Where(i =>
-                    i.enable && (i.group == userData.group || i.groups != null && i.groups.Contains(userData.group))
+                    i.enable && (i.groups != null ? i.groups.Contains(userData.group) : i.group == userData.group)
                 )?.Where(i =>
                     i.geo_hide == null || geo == null || !i.geo_hide.Contains(geo)
                 )?.ToArray();
@@ -117,8 +117,8 @@ namespace MatriX.API.Middlewares
             {
                 // рабочие сервера с лимитом нагрузки, но не перегружены в limit_hard
                 Server[] working_servers = AppInit.settings.servers?.Where(i =>
-                    i.enable && i.status == 3 && i.limit_hard != null && i.status_hard != 1 && 
-                    (i.group == userData.group || i.groups != null && i.groups.Contains(userData.group))
+                    i.enable && i.status == 3 && i.limit_hard != null && i.status_hard != 1 &&
+                    (i.groups != null ? i.groups.Contains(userData.group) : i.group == userData.group)
                 )?.Where(i =>
                     i.geo_hide == null || geo == null || !i.geo_hide.Contains(geo)
                 )?.ToArray();
@@ -153,7 +153,7 @@ namespace MatriX.API.Middlewares
         {
             #region search / torinfo / control
             var userData = httpContext.Features.Get<UserData>();
-            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/admin/") || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
+            if (userData.login == "service" || httpContext.Request.Path.Value.StartsWith("/readbytes/") || httpContext.Request.Path.Value.StartsWith("/admin/") || httpContext.Request.Path.Value.StartsWith("/torinfo") || httpContext.Request.Path.Value.StartsWith("/control") || httpContext.Request.Path.Value.StartsWith("/userdata"))
             {
                 if (!httpContext.Request.Path.Value.StartsWith("/userdata/slave"))
                 {
@@ -201,6 +201,15 @@ namespace MatriX.API.Middlewares
 
             if (isStream)
             {
+                #region maxReadBytesToHour
+                ulong maxReadBytes = AppInit.groupSettings(userData.group).maxReadBytesToHour;
+                if (maxReadBytes > 0 && AppInit.ReadBytesToHour.TryGetValue(userData.id, out ulong _readBytes) && _readBytes > maxReadBytes)
+                {
+                    httpContext.Response.Redirect(AppInit.settings.maxReadBytes_urlVideoError);
+                    return;
+                }
+                #endregion
+
                 if (AppInit.settings.remoteStream_pattern != null)
                 {
                     string domainid = userData.login ?? userData.domainid;

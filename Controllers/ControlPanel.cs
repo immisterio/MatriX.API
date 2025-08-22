@@ -116,7 +116,7 @@ namespace MatriX.API.Controllers
 					if (geo != null && server.geo_hide != null && server.geo_hide.Contains(geo))
 						continue;
 
-					if (server.group == userData.group || (server.groups != null && server.groups.Contains(userData.group)))
+                    if (server.groups != null ? server.groups.Contains(userData.group) : server.group == userData.group)
 					{
 						string _checked = server.host == userData.server ? "checked" : "";
 						string _status = $"<b style=\"color: crimson;\">{server.status} / {server.status_hard}</b>";
