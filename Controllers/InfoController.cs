@@ -24,36 +24,6 @@ namespace MatriX.API.Controllers
         }
         #endregion
 
-        #region TorInfo
-        [Route("torinfo")]
-        public ActionResult TorInfo()
-        {
-            var userData = HttpContext.Features.Get<UserData>();
-            if (userData == null || !userData.admin)
-                return Content("not admin");
-
-            List<TorInfo> newinfo = new List<TorInfo>();
-
-            foreach (var i in TorAPI.db.Select(i => i.Value))
-            {
-                var temp = new TorInfo()
-                {
-                    port = i.port,
-                    user = i.user,
-                    lastActive = i.lastActive,
-                    activeStreams = i.activeStreams
-                };
-
-                if (memoryCache.TryGetValue($"memKeyLocIP:{i.user.id}:{DateTime.Now.Hour}", out HashSet<string> ips))
-                    temp.clientIps = ips;
-
-                newinfo.Add(temp);
-            }
-
-            return Json(newinfo);
-        }
-        #endregion
-
         #region ReadBytesHour
         [Route("readbytes/hour")]
         public ActionResult ReadBytesHour()
@@ -68,6 +38,7 @@ namespace MatriX.API.Controllers
             return Json(AppInit.ReadBytesToHour);
         }
         #endregion
+
 
         [Route("top")]
         public string Top() => AppInit.top;

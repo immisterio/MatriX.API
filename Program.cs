@@ -1,10 +1,12 @@
 using MatriX.API.Middlewares;
 using MatriX.API.Models;
+using MatriX.API.Models.Stats;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -118,10 +120,13 @@ namespace MatriX.API
                         if (AppInit.settings.servers == null)
                             continue;
 
+                        var servers_stats = new List<ServerHtop>();
                         ConcurrentDictionary<string, ulong> readBytesToHour = null;
 
                         foreach (var server in AppInit.settings.servers)
                         {
+                            var servhtop = new ServerHtop();
+
                             try
                             {
                                 if (!server.enable || string.IsNullOrEmpty(server.host))
@@ -156,7 +161,25 @@ namespace MatriX.API
                                                 string rbth = await response.Content.ReadAsStringAsync();
 
                                                 foreach (var kvp in JsonConvert.DeserializeObject<ConcurrentDictionary<string, ulong>>(rbth))
+                                                {
                                                     readBytesToHour.AddOrUpdate(kvp.Key, kvp.Value, (k, v) => v + kvp.Value);
+
+                                                    if (StatData.ReadBytesToHour.TryGetValue(kvp.Key, out var _val))
+                                                    {
+                                                        if (_val.TryGetValue(server.host, out ulong _h))
+                                                        {
+                                                            _val[server.host] = _h + kvp.Value;
+                                                        }
+                                                        else
+                                                        {
+                                                            StatData.ReadBytesToHour[kvp.Key].TryAdd(server.host, kvp.Value);
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        StatData.ReadBytesToHour.TryAdd(kvp.Key, new Dictionary<string, ulong>() { [server.host] = kvp.Value });
+                                                    }
+                                                }
                                             }
                                             catch { }
                                         }
@@ -181,6 +204,11 @@ namespace MatriX.API
                                                     int.TryParse(Regex.Match(top, "Transmitted: ([0-9]+)").Groups[1].Value, out int transmitted);
                                                     if (0 > transmitted)
                                                         transmitted = 0;
+
+                                                    servhtop.load.cpu = cpu;
+                                                    servhtop.load.memory = mem;
+                                                    servhtop.load.received = received;
+                                                    servhtop.load.transmitted = transmitted;
 
                                                     #region ram
                                                     if (server.limit.ram != 0 && mem > server.limit.ram)
@@ -244,6 +272,7 @@ namespace MatriX.API
 
                                         server.status = status;
                                         server.status_hard = status_hard;
+                                        servhtop.status_hard = server.status_hard;
                                     }
                                     else
                                     {
@@ -252,10 +281,20 @@ namespace MatriX.API
                                 }
                             }
                             catch { server.status = 2; }
+
+                            servhtop.name = server.name;
+                            servhtop.checkTime = DateTime.Now;
+                            servhtop.status = server.status;
+                            servhtop.group = server.group;
+                            servhtop.groups = server.groups;
+                            servhtop.workinghours = server.workinghours;
+                            servers_stats.Add(servhtop);
                         }
 
                         if (readBytesToHour != null)
                             AppInit.ReadBytesToHour = readBytesToHour;
+
+                        StatData.servers = servers_stats;
                     }
                     catch { }
                 }
