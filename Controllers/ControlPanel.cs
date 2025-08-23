@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -14,12 +15,15 @@ namespace MatriX.API.Controllers
 {
     public class ControlPanel : Controller
     {
+        #region ControlPanel
         IMemoryCache memoryCache;
 
         public ControlPanel(IMemoryCache m) {
             memoryCache = m;
         }
+        #endregion
 
+        #region Index
         [Route("control")]
         public ActionResult Index()
         {
@@ -29,6 +33,9 @@ namespace MatriX.API.Controllers
 			var userData = HttpContext.Features.Get<UserData>();
             if (userData == null)
                 return Content("not user");
+
+            if (System.IO.File.Exists("control.html"))
+                return Content(System.IO.File.ReadAllText("control.html"), contentType: "text/html; charset=utf-8");
 
             string html = @"
 <!DOCTYPE html>
@@ -151,18 +158,75 @@ namespace MatriX.API.Controllers
 
             return Content(html, contentType: "text/html; charset=utf-8");
         }
+        #endregion
 
+        #region Servers
+        [Route("control/servers")]
+        public ActionResult Servers()
+        {
+            if (!AppInit.settings.AuthorizationRequired)
+                return Json(new { error = "AuthorizationRequired" });
 
+            var userData = HttpContext.Features.Get<UserData>();
+            if (userData == null)
+                return Json(new { error = "not user" });
 
+            var serers = new List<UserServer>();
+
+            if (AppInit.settings.servers != null)
+            {
+                string geo = GeoIP2.Country(userData._ip);
+
+                foreach (var server in AppInit.settings.servers)
+                {
+                    if (!server.enable)
+                        continue;
+
+                    if (geo != null && server.geo_hide != null && server.geo_hide.Contains(geo))
+                        continue;
+
+                    if (server.groups != null ? server.groups.Contains(userData.group) : server.group == userData.group)
+                    {
+                        bool @checked = server.host == userData.server;
+                        string status = $"{server.status} / {server.status_hard}";
+
+                        switch (server.status)
+                        {
+                            case 0:
+                                status = "not checked";
+                                break;
+                            case 1:
+                                status = "work";
+                                break;
+                            case 2:
+                                status = "shutdown";
+                                break;
+                            case 3:
+                                status = "overloaded";
+                                if (server.limit_hard != null && server.status_hard != 1)
+                                    status = "hard";
+                                break;
+                        }
+
+                        serers.Add(new UserServer(server.name, status, server.host, @checked));
+                    }
+                }
+            }
+
+            return Content(JsonConvert.SerializeObject(serers), "application/javascript; charset=utf-8");
+        }
+        #endregion
+
+        #region Save
         [Route("control/save")]
-        async public Task<ActionResult> Save(string ts, string server)
+        async public Task<ActionResult> Save(string ts, string server, bool jsonresult)
         {
 			if (!AppInit.settings.AuthorizationRequired)
-				return Content("AuthorizationRequired");
+                return Json(new { error = "AuthorizationRequired" });
 
-			var userData = HttpContext.Features.Get<UserData>();
+            var userData = HttpContext.Features.Get<UserData>();
             if (userData == null)
-                return Content("not user");
+                return Json(new { error = "not user" });
 
 			bool update = false, reload = false;
 
@@ -212,6 +276,9 @@ namespace MatriX.API.Controllers
 				}
 			}
 
+			if (jsonresult)
+				return Json(new { success = true });
+
             string html = @"
 <!DOCTYPE html>
 <html>
@@ -231,5 +298,6 @@ namespace MatriX.API.Controllers
 
             return Content(html, contentType: "text/html; charset=utf-8");
         }
+        #endregion
     }
 }

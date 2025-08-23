@@ -28,9 +28,9 @@ namespace MatriX.API.Controllers
         [Route("readbytes/hour")]
         public ActionResult ReadBytesHour()
         {
-            var userData = HttpContext.Features.Get<UserData>();
             if (AppInit.settings.AuthorizationServerAPI != HttpContext.Connection.RemoteIpAddress.ToString())
             {
+                var userData = HttpContext.Features.Get<UserData>();
                 if (userData == null || !userData.admin)
                     return Content("not admin");
             }

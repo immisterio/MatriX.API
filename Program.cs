@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -122,6 +123,7 @@ namespace MatriX.API
 
                         var servers_stats = new List<ServerHtop>();
                         ConcurrentDictionary<string, ulong> readBytesToHour = null;
+                        var stats_readBytesToHour = new Dictionary<string, Dictionary<string, ulong>>();
 
                         foreach (var server in AppInit.settings.servers)
                         {
@@ -162,24 +164,38 @@ namespace MatriX.API
 
                                                 foreach (var kvp in JsonConvert.DeserializeObject<ConcurrentDictionary<string, ulong>>(rbth))
                                                 {
-                                                    readBytesToHour.AddOrUpdate(kvp.Key, kvp.Value, (k, v) => v + kvp.Value);
-
-                                                    if (StatData.ReadBytesToHour.TryGetValue(kvp.Key, out var _val))
+                                                    if (stats_readBytesToHour.TryGetValue(kvp.Key, out var _val))
                                                     {
                                                         if (_val.TryGetValue(server.host, out ulong _h))
                                                         {
-                                                            _val[server.host] = _h + kvp.Value;
+                                                            _val[server.host] = kvp.Value;
                                                         }
                                                         else
                                                         {
-                                                            StatData.ReadBytesToHour[kvp.Key].TryAdd(server.host, kvp.Value);
+                                                            stats_readBytesToHour[kvp.Key].TryAdd(server.host, kvp.Value);
                                                         }
                                                     }
                                                     else
                                                     {
-                                                        StatData.ReadBytesToHour.TryAdd(kvp.Key, new Dictionary<string, ulong>() { [server.host] = kvp.Value });
+                                                        stats_readBytesToHour.TryAdd(kvp.Key, new Dictionary<string, ulong>() { [server.host] = kvp.Value });
                                                     }
+
+                                                    ulong sum = (ulong)stats_readBytesToHour[kvp.Key].Sum(i => (long)i.Value);
+                                                    readBytesToHour.AddOrUpdate(kvp.Key, sum, (k, v) => sum);
                                                 }
+                                            }
+                                            catch { }
+                                        }
+                                        #endregion
+
+                                        #region update stat
+                                        if (status == 1)
+                                        {
+                                            try
+                                            {
+                                                response = await client.GetAsync($"{server.host}/admin/stats");
+                                                string rbth = await response.Content.ReadAsStringAsync();
+                                                servhtop.stats = JsonConvert.DeserializeObject<ServerStat>(rbth);
                                             }
                                             catch { }
                                         }
@@ -295,6 +311,7 @@ namespace MatriX.API
                             AppInit.ReadBytesToHour = readBytesToHour;
 
                         StatData.servers = servers_stats;
+                        StatData.ReadBytesToHour = stats_readBytesToHour;
                     }
                     catch { }
                 }

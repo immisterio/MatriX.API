@@ -113,17 +113,47 @@ namespace MatriX.API.Controllers
         [Route("admin/stats")]
         public ActionResult Stats()
         {
-            var userData = HttpContext.Features.Get<UserData>();
-            if (userData == null || !userData.admin)
-                return Content("not admin");
-
-            return Content(JsonConvert.SerializeObject(new 
+            if (AppInit.settings.AuthorizationServerAPI != HttpContext.Connection.RemoteIpAddress.ToString())
             {
-                clients = TorAPI.db.Count,
-                streams = TorAPI.db.Sum(i => i.Value.filteredActiveStreams.Count),
-                readbytes = AppInit.ReadBytesToHour.Sum(i => (long)i.Value)
+                var userData = HttpContext.Features.Get<UserData>();
+                if (userData == null || !userData.admin)
+                    return Content("not admin");
+            }
 
-            }, Formatting.Indented), "application/javascript; charset=utf-8");
+            if (StatData.servers != null && StatData.servers.Count > 0)
+            {
+                string GetStringSizeInGB(long readbytes)
+                {
+                    string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+
+                    if (readbytes == 0)
+                        return "0 B";
+
+                    long bytes = Math.Abs(readbytes);
+                    int order = (int)(Math.Log(bytes) / Math.Log(1024));
+                    double num = Math.Round(bytes / Math.Pow(1024, order), 2);
+
+                    return $"{(readbytes < 0 ? "-" : "")}{num} {sizes[order]}";
+                }
+
+                return Content(JsonConvert.SerializeObject(new
+                {
+                    clients = StatData.servers.Sum(i => i.stats.clients),
+                    streams = StatData.servers.Sum(i => i.stats.streams),
+                    read = GetStringSizeInGB(StatData.servers.Sum(i => i.stats.readbytes))
+
+                }, Formatting.Indented), "application/javascript; charset=utf-8");
+            }
+            else
+            {
+                return Content(JsonConvert.SerializeObject(new
+                {
+                    clients = TorAPI.db.Count,
+                    streams = TorAPI.db.Sum(i => i.Value.filteredActiveStreams.Count),
+                    readbytes = AppInit.ReadBytesToHour.Sum(i => (long)i.Value)
+
+                }, Formatting.Indented), "application/javascript; charset=utf-8");
+            }
         }
         #endregion
 

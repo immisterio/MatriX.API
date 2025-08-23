@@ -99,10 +99,20 @@ namespace MatriX.API
 
             ThreadPool.QueueUserWorkItem(async _ =>
             {
+                bool cleared = true;
+
                 while (true)
                 {
-                    await Task.Delay(TimeSpan.FromHours(1)).ConfigureAwait(false);
-                    ReadBytesToHour.Clear();
+                    await Task.Delay(TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+                    if (DateTime.Now.Minute == 1 && cleared)
+                    {
+                        cleared = false;
+                        ReadBytesToHour.Clear();
+                    }
+                    else if (DateTime.Now.Minute != 1)
+                    {
+                        cleared = true;
+                    }
                 }
             });
         }

@@ -90,7 +90,7 @@ namespace MatriX.API.Middlewares
             }
             else 
             {
-                if (httpContext.Request.Path.Value.StartsWith("/readbytes/"))
+                if (httpContext.Request.Path.Value.StartsWith("/readbytes/") || httpContext.Request.Path.Value == "/admin/stats")
                 {
                     httpContext.Features.Set(new UserData()
                     {
