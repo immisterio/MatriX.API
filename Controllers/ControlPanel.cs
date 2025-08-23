@@ -208,7 +208,9 @@ namespace MatriX.API.Controllers
                                 break;
                         }
 
-                        serers.Add(new UserServer(server.name, status, server.host, @checked));
+                        var load = StatData.servers?.FirstOrDefault(i => i.host == server.host)?.load;
+
+                        serers.Add(new UserServer(server.name, status, server.host, @checked, load));
                     }
                 }
             }

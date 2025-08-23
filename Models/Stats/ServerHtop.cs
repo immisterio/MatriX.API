@@ -8,6 +8,8 @@ namespace MatriX.API.Models.Stats
 
         public string name { get; set; }
 
+        public string host { get; set; }
+
         public int group { get; set; }
 
         public int[] groups { get; set; }

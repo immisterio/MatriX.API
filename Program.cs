@@ -201,7 +201,7 @@ namespace MatriX.API
                                         }
                                         #endregion
 
-                                        if (status == 1 && server.limit != null)
+                                        if (status == 1)
                                         {
                                             try
                                             {
@@ -226,61 +226,64 @@ namespace MatriX.API
                                                     servhtop.load.received = received;
                                                     servhtop.load.transmitted = transmitted;
 
-                                                    #region ram
-                                                    if (server.limit.ram != 0 && mem > server.limit.ram)
-                                                        status = 3;
-
-                                                    if (server.limit_hard != null)
+                                                    if (server.limit != null)
                                                     {
-                                                        if (server.limit_hard.ram != 0 && mem > server.limit_hard.ram)
-                                                            status_hard = 1;
-                                                    }
-                                                    #endregion
-
-                                                    #region cpu
-                                                    if (server.limit.cpu != 0 && cpu > server.limit.cpu)
-                                                        status = 3;
-
-                                                    if (server.limit_hard != null)
-                                                    {
-                                                        if (server.limit_hard.cpu != 0 && cpu > server.limit_hard.cpu)
-                                                            status_hard = 1;
-                                                    }
-                                                    #endregion
-
-                                                    #region network
-                                                    if (server.limit.network != null)
-                                                    {
-                                                        if (server.limit.network.all != 0)
-                                                        {
-                                                            if ((received + transmitted) > server.limit.network.all)
-                                                                status = 3;
-                                                        }
-
-                                                        if (server.limit.network.transmitted != 0 && transmitted > server.limit.network.transmitted)
+                                                        #region ram
+                                                        if (server.limit.ram != 0 && mem > server.limit.ram)
                                                             status = 3;
 
-                                                        if (server.limit.network.received != 0 && received > server.limit.network.received)
-                                                            status = 3;
-                                                    }
-                                                    #endregion
-
-                                                    #region network_hard
-                                                    if (server.limit_hard != null && server.limit_hard.network != null)
-                                                    {
-                                                        if (server.limit_hard.network.all != 0)
+                                                        if (server.limit_hard != null)
                                                         {
-                                                            if ((received + transmitted) > server.limit_hard.network.all)
+                                                            if (server.limit_hard.ram != 0 && mem > server.limit_hard.ram)
                                                                 status_hard = 1;
                                                         }
+                                                        #endregion
 
-                                                        if (server.limit_hard.network.transmitted != 0 && transmitted > server.limit_hard.network.transmitted)
-                                                            status_hard = 1;
+                                                        #region cpu
+                                                        if (server.limit.cpu != 0 && cpu > server.limit.cpu)
+                                                            status = 3;
 
-                                                        if (server.limit_hard.network.received != 0 && received > server.limit_hard.network.received)
-                                                            status_hard = 1;
+                                                        if (server.limit_hard != null)
+                                                        {
+                                                            if (server.limit_hard.cpu != 0 && cpu > server.limit_hard.cpu)
+                                                                status_hard = 1;
+                                                        }
+                                                        #endregion
+
+                                                        #region network
+                                                        if (server.limit.network != null)
+                                                        {
+                                                            if (server.limit.network.all != 0)
+                                                            {
+                                                                if ((received + transmitted) > server.limit.network.all)
+                                                                    status = 3;
+                                                            }
+
+                                                            if (server.limit.network.transmitted != 0 && transmitted > server.limit.network.transmitted)
+                                                                status = 3;
+
+                                                            if (server.limit.network.received != 0 && received > server.limit.network.received)
+                                                                status = 3;
+                                                        }
+                                                        #endregion
+
+                                                        #region network_hard
+                                                        if (server.limit_hard != null && server.limit_hard.network != null)
+                                                        {
+                                                            if (server.limit_hard.network.all != 0)
+                                                            {
+                                                                if ((received + transmitted) > server.limit_hard.network.all)
+                                                                    status_hard = 1;
+                                                            }
+
+                                                            if (server.limit_hard.network.transmitted != 0 && transmitted > server.limit_hard.network.transmitted)
+                                                                status_hard = 1;
+
+                                                            if (server.limit_hard.network.received != 0 && received > server.limit_hard.network.received)
+                                                                status_hard = 1;
+                                                        }
+                                                        #endregion
                                                     }
-                                                    #endregion
                                                 }
                                             }
                                             catch { }
@@ -299,6 +302,7 @@ namespace MatriX.API
                             catch { server.status = 2; }
 
                             servhtop.name = server.name;
+                            servhtop.host = server.host;
                             servhtop.checkTime = DateTime.Now;
                             servhtop.status = server.status;
                             servhtop.group = server.group;
