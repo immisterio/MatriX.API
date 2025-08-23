@@ -78,30 +78,6 @@ namespace MatriX.API.Controllers
         }
         #endregion
 
-        #region servers stats
-        [Route("admin/stats/servers")]
-        public ActionResult ServersStats()
-        {
-            var userData = HttpContext.Features.Get<UserData>();
-            if (userData == null || !userData.admin)
-                return Content("not admin");
-
-            return Content(JsonConvert.SerializeObject(StatData.servers, Formatting.Indented), "application/javascript; charset=utf-8");
-        }
-        #endregion
-
-        #region readbytes
-        [Route("admin/stats/readbytes")]
-        public ActionResult ReadBytesMasterStat()
-        {
-            var userData = HttpContext.Features.Get<UserData>();
-            if (userData == null || !userData.admin)
-                return Content("not admin");
-
-            return Content(JsonConvert.SerializeObject(StatData.ReadBytesToHour, Formatting.Indented), "application/javascript; charset=utf-8");
-        }
-        #endregion
-
         #region TorInfo
         [Route("admin/torinfo")]
         public ActionResult TorInfo()
@@ -130,6 +106,48 @@ namespace MatriX.API.Controllers
             }
 
             return Content(JsonConvert.SerializeObject(newinfo, Formatting.Indented), "application/javascript; charset=utf-8");
+        }
+        #endregion
+
+        #region stats
+        [Route("admin/stats")]
+        public ActionResult Stats()
+        {
+            var userData = HttpContext.Features.Get<UserData>();
+            if (userData == null || !userData.admin)
+                return Content("not admin");
+
+            return Content(JsonConvert.SerializeObject(new 
+            {
+                clients = TorAPI.db.Count,
+                streams = TorAPI.db.Sum(i => i.Value.filteredActiveStreams.Count),
+                readbytes = AppInit.ReadBytesToHour.Sum(i => (long)i.Value)
+
+            }, Formatting.Indented), "application/javascript; charset=utf-8");
+        }
+        #endregion
+
+        #region stats/servers
+        [Route("admin/stats/servers")]
+        public ActionResult ServersStats()
+        {
+            var userData = HttpContext.Features.Get<UserData>();
+            if (userData == null || !userData.admin)
+                return Content("not admin");
+
+            return Content(JsonConvert.SerializeObject(StatData.servers, Formatting.Indented), "application/javascript; charset=utf-8");
+        }
+        #endregion
+
+        #region stats/readbytes
+        [Route("admin/stats/readbytes")]
+        public ActionResult ReadBytesMasterStat()
+        {
+            var userData = HttpContext.Features.Get<UserData>();
+            if (userData == null || !userData.admin)
+                return Content("not admin");
+
+            return Content(JsonConvert.SerializeObject(StatData.ReadBytesToHour, Formatting.Indented), "application/javascript; charset=utf-8");
         }
         #endregion
     }
