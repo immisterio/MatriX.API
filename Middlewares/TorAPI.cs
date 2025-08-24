@@ -728,23 +728,38 @@ namespace MatriX.API.Middlewares
                     throw new NotSupportedException("NotSupported_UnwritableStream");
 
 
-                byte[] buffer = ArrayPool<byte>.Shared.Rent(4096);
+                int rent = responseMessage.Content.Headers.ContentLength > 100000000 ? 81920 : 4096;
+                byte[] buffer = ArrayPool<byte>.Shared.Rent(rent);
+
                 string tlink = Regex.Match(context.Request.QueryString.Value, @"link=([0-9a-z]+)", RegexOptions.IgnoreCase).Groups[1].Value;
                 string tindex = Regex.Match(context.Request.QueryString.Value, @"index=([0-9]+)", RegexOptions.IgnoreCase).Groups[1].Value;
 
                 try
                 {
-                    int bytesRead;
+                    int bytesRead, tohours = 0;
+                    var nexTimeUpdateStat = DateTime.Now.AddMilliseconds(100);
+
                     Memory<byte> memoryBuffer = buffer.AsMemory();
 
                     while ((bytesRead = await responseStream.ReadAsync(memoryBuffer, context.RequestAborted).ConfigureAwait(false)) != 0)
                     {
                         info.lastActive = DateTime.Now;
 
-                        if (!string.IsNullOrEmpty(tlink))
-                            info.activeStreams[$"{tlink}_{tindex}"] = DateTime.Now;
+                        if (DateTime.Now > nexTimeUpdateStat)
+                        {
+                            nexTimeUpdateStat = DateTime.Now.AddMilliseconds(100);
 
-                        AppInit.ReadBytesToHour.AddOrUpdate(info.user.id, (ulong)bytesRead, (k, v) => v + (ulong)bytesRead);
+                            if (!string.IsNullOrEmpty(tlink))
+                                info.activeStreams[$"{tlink}_{tindex}"] = DateTime.Now;
+
+                            AppInit.ReadBytesToHour.AddOrUpdate(info.user.id, (ulong)tohours, (k, v) => v + (ulong)tohours);
+                            tohours = 0;
+                        }
+                        else
+                        {
+                            tohours += bytesRead;
+                        }
+
                         await response.Body.WriteAsync(memoryBuffer.Slice(0, bytesRead), context.RequestAborted).ConfigureAwait(false);
                     }
                 }
