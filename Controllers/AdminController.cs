@@ -66,6 +66,19 @@ namespace MatriX.API.Controllers
         }
         #endregion
 
+
+        #region admin
+        [Route("admin")]
+        public ActionResult AdminMain()
+        {
+            var userData = HttpContext.Features.Get<UserData>();
+            if (userData == null || !userData.admin)
+                return Content("not admin");
+
+            return Content(System.IO.File.ReadAllText("admin.html"), contentType: "text/html; charset=utf-8");
+        }
+        #endregion
+
         #region servers
         [Route("admin/servers")]
         public ActionResult Servers()
@@ -108,6 +121,7 @@ namespace MatriX.API.Controllers
             return Content(JsonConvert.SerializeObject(newinfo, Formatting.Indented), "application/javascript; charset=utf-8");
         }
         #endregion
+
 
         #region stats
         [Route("admin/stats")]
@@ -169,6 +183,7 @@ namespace MatriX.API.Controllers
         }
         #endregion
 
+
         #region stats/readbytes
         [Route("admin/stats/readbytes")]
         public ActionResult ReadBytesMasterStat()
@@ -178,6 +193,68 @@ namespace MatriX.API.Controllers
                 return Content("not admin");
 
             return Content(JsonConvert.SerializeObject(StatData.ReadBytesToHour, Formatting.Indented), "application/javascript; charset=utf-8");
+        }
+        #endregion
+
+        #region stats/readbytes-day
+        [Route("admin/stats/readbytes-day")]
+        public ActionResult ReadBytesDayMasterStat()
+        {
+            var userData = HttpContext.Features.Get<UserData>();
+            if (userData == null || !userData.admin)
+                return Content("not admin");
+
+            return Content(JsonConvert.SerializeObject(StatData.ReadBytesToDay, Formatting.Indented), "application/javascript; charset=utf-8");
+        }
+        #endregion
+
+        #region stats/readbytes-month
+        [Route("admin/stats/readbytes-month")]
+        public ActionResult ReadBytesMonthMasterStat()
+        {
+            var userData = HttpContext.Features.Get<UserData>();
+            if (userData == null || !userData.admin)
+                return Content("not admin");
+
+            var result = new Dictionary<string, Dictionary<string, Dictionary<int, long>>>();
+            int daysInMonth = DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month);
+
+            for (int day = 1; day <= daysInMonth; day++)
+            {
+                string filePath = $"stat/readBytes-{day}.json";
+                if (!System.IO.File.Exists(filePath))
+                    continue;
+
+                var fileContent = System.IO.File.ReadAllText(filePath);
+                var dayData = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, Dictionary<int, long>>>>(fileContent);
+
+                foreach (var idEntry in dayData)
+                {
+                    if (!result.TryGetValue(idEntry.Key, out var servDict))
+                    {
+                        servDict = new Dictionary<string, Dictionary<int, long>>();
+                        result[idEntry.Key] = servDict;
+                    }
+
+                    foreach (var servEntry in idEntry.Value)
+                    {
+                        if (!servDict.TryGetValue(servEntry.Key, out var dayDict))
+                        {
+                            dayDict = new Dictionary<int, long>();
+                            servDict[servEntry.Key] = dayDict;
+                        }
+
+                        foreach (var hourEntry in servEntry.Value)
+                        {
+                            // hourEntry.Key - это час, hourEntry.Value - байты
+                            // Используем day как ключ вместо hour
+                            dayDict[day] = dayDict.ContainsKey(day) ? dayDict[day] + hourEntry.Value : hourEntry.Value;
+                        }
+                    }
+                }
+            }
+
+            return Content(JsonConvert.SerializeObject(result, Formatting.Indented), "application/javascript; charset=utf-8");
         }
         #endregion
     }

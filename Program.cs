@@ -121,6 +121,7 @@ namespace MatriX.API
                         if (AppInit.settings.servers == null)
                             continue;
 
+                        var currentTime = DateTime.Now;
                         var servers_stats = new List<ServerHtop>();
                         ConcurrentDictionary<string, ulong> readBytesToHour = null;
                         var stats_readBytesToHour = new Dictionary<string, Dictionary<string, ulong>>();
@@ -316,6 +317,35 @@ namespace MatriX.API
 
                         StatData.servers = servers_stats;
                         StatData.ReadBytesToHour = stats_readBytesToHour;
+
+                        #region ReadBytesToDay
+                        if (currentTime.Minute >= 5)
+                        {
+                            foreach (var idEntry in stats_readBytesToHour)
+                            {
+                                string id = idEntry.Key;
+                                foreach (var servEntry in idEntry.Value)
+                                {
+                                    string serv = servEntry.Key;
+                                    ulong bytes = servEntry.Value;
+
+                                    if (!StatData.ReadBytesToDay.TryGetValue(id, out var servDict))
+                                    {
+                                        servDict = new Dictionary<string, Dictionary<int, long>>();
+                                        StatData.ReadBytesToDay[id] = servDict;
+                                    }
+
+                                    if (!servDict.TryGetValue(serv, out var hourDict))
+                                    {
+                                        hourDict = new Dictionary<int, long>();
+                                        servDict[serv] = hourDict;
+                                    }
+
+                                    hourDict[currentTime.Hour] = (long)bytes;
+                                }
+                            }
+                        }
+                        #endregion
                     }
                     catch { }
                 }
