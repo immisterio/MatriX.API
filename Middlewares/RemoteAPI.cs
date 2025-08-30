@@ -63,6 +63,7 @@ namespace MatriX.API.Middlewares
                         return "http://127.0.0.1";
                 }
 
+                #region сервер к которому клиент уже привязан 
                 string mkey = $"RemoteAPI:serv:{userData.id}";
                 if (mem != null && mem.TryGetValue(mkey, out string _serv))
                 {
@@ -75,6 +76,11 @@ namespace MatriX.API.Middlewares
                         return _serv;
                     }
                 }
+                #endregion
+
+                // принудительный сервер для всех кто использует auto
+                if (working_servers.FirstOrDefault(i => i.forced) is Server forcedServer)
+                    return forcedServer.host;
 
                 #region weight
                 // 1. Получить массив рабочих серверов (working_servers).

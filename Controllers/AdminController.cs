@@ -154,6 +154,7 @@ namespace MatriX.API.Controllers
                 {
                     clients = StatData.servers.Sum(i => i.stats.clients),
                     streams = StatData.servers.Sum(i => i.stats.streams),
+                    readbytes = StatData.servers.Sum(i => i.stats.readbytes),
                     read = GetStringSizeInGB(StatData.servers.Sum(i => i.stats.readbytes))
 
                 }, Formatting.Indented), "application/javascript; charset=utf-8");

@@ -6,6 +6,11 @@ namespace MatriX.API.Models
     {
         public bool enable { get; set; }
 
+        /// <summary>
+        /// Принудительно использовать для всех кто использует auto
+        /// </summary>
+        public bool forced { get; set; }
+
         public int group { get; set; }
 
         public int[] groups { get; set; }
