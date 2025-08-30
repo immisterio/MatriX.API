@@ -75,7 +75,10 @@ namespace MatriX.API.Middlewares
                         return _serv;
 
                     if (fserv != null)
+                    {
+                        mem.Set(mkey, fserv, DateTime.Now.AddHours(4));
                         return fserv;
+                    }
 
                     if (servers.FirstOrDefault(i => i.host == _serv && i.status == 1) != null)
                     {
@@ -86,7 +89,10 @@ namespace MatriX.API.Middlewares
                 #endregion
 
                 if (fserv != null)
+                {
+                    mem.Set(mkey, fserv, DateTime.Now.AddHours(4));
                     return fserv;
+                }
 
                 #region weight
                 // 1. Получить массив рабочих серверов (working_servers).
