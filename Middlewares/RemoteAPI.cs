@@ -1,15 +1,16 @@
 ﻿using MatriX.API.Models;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http;
-using System.Threading.Tasks;
-using System;
-using System.Net.Http;
-using System.Text.RegularExpressions;
-using System.Net.Http.Headers;
 using Microsoft.Extensions.Caching.Memory;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Web;
 
 namespace MatriX.API.Middlewares
@@ -63,12 +64,18 @@ namespace MatriX.API.Middlewares
                         return "http://127.0.0.1";
                 }
 
+                // принудительный сервер для всех кто использует auto
+                string fserv = forcedServer(userData, working_servers.Where(i => i.forced)?.ToArray(), mem);
+
                 #region сервер к которому клиент уже привязан 
                 string mkey = $"RemoteAPI:serv:{userData.id}";
                 if (mem != null && mem.TryGetValue(mkey, out string _serv))
                 {
                     if (isStream)
                         return _serv;
+
+                    if (fserv != null)
+                        return fserv;
 
                     if (servers.FirstOrDefault(i => i.host == _serv && i.status == 1) != null)
                     {
@@ -78,9 +85,8 @@ namespace MatriX.API.Middlewares
                 }
                 #endregion
 
-                // принудительный сервер для всех кто использует auto
-                if (working_servers.FirstOrDefault(i => i.forced) is Server forcedServer)
-                    return forcedServer.host;
+                if (fserv != null)
+                    return fserv;
 
                 #region weight
                 // 1. Получить массив рабочих серверов (working_servers).
@@ -347,6 +353,33 @@ namespace MatriX.API.Middlewares
             }
 
             return serip;
+        }
+        #endregion
+
+
+        #region forcedServer
+        static string forcedServer(UserData userData, Server[] forcedServers, IMemoryCache mem)
+        {
+            if (forcedServers == null || forcedServers.Length == 0 || mem == null)
+                return null;
+
+            if (forcedServers.Length == 1)
+                return forcedServers.First().host;
+
+            string mkey = $"RemoteAPI:forcedServer:{userData.id}";
+            if (mem.TryGetValue(mkey, out string _serv))
+            {
+                if (forcedServers.FirstOrDefault(i => i.host == _serv && i.status == 1) != null)
+                {
+                    mem.Set(mkey, _serv, DateTime.Now.AddHours(4));
+                    return _serv;
+                }
+            }
+
+            string server = forcedServers[Random.Shared.Next(forcedServers.Length)].host;
+            mem.Set(mkey, server, DateTime.Now.AddHours(4));
+
+            return server;
         }
         #endregion
     }
