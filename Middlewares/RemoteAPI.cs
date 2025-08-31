@@ -219,26 +219,26 @@ namespace MatriX.API.Middlewares
 
             if (isStream)
             {
-                #region maxReadBytesToHour
-                ulong maxReadBytes = AppInit.groupSettings(userData.group).maxReadBytesToHour;
-                if (maxReadBytes > 0 && AppInit.ReadBytesToHour.TryGetValue(userData.id, out ulong _readBytes) && _readBytes > maxReadBytes)
-                {
-                    httpContext.Response.Redirect(AppInit.settings.maxReadBytes_urlVideoError);
-                    return;
-                }
-                #endregion
-
-                if (AppInit.settings.remoteStream_pattern != null)
-                {
-                    string domainid = userData.login ?? userData.domainid;
-                    var g = Regex.Match(serip, AppInit.settings.remoteStream_pattern).Groups;
-
-                    httpContext.Response.Redirect($"{g["sheme"]}://{domainid}.{g["server"]}" + clearUri);
-                    return;
-                }
+                if (httpContext.Request.Path.Value.StartsWith("/stream/") && Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|stat|m3u)(&|$)")) { }
                 else
                 {
-                    if (httpContext.Request.Path.Value.StartsWith("/stream/") && Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|stat|m3u)(&|$)")) { }
+                    #region maxReadBytesToHour
+                    ulong maxReadBytes = AppInit.groupSettings(userData.group).maxReadBytesToHour;
+                    if (maxReadBytes > 0 && AppInit.ReadBytesToHour.TryGetValue(userData.id, out ulong _readBytes) && _readBytes > maxReadBytes)
+                    {
+                        httpContext.Response.Redirect(AppInit.settings.maxReadBytes_urlVideoError);
+                        return;
+                    }
+                    #endregion
+
+                    if (AppInit.settings.remoteStream_pattern != null)
+                    {
+                        string domainid = userData.login ?? userData.domainid;
+                        var g = Regex.Match(serip, AppInit.settings.remoteStream_pattern).Groups;
+
+                        httpContext.Response.Redirect($"{g["sheme"]}://{domainid}.{g["server"]}" + clearUri);
+                        return;
+                    }
                     else
                     {
                         httpContext.Response.Redirect($"{serip}{clearUri}");
