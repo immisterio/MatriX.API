@@ -108,13 +108,17 @@ namespace MatriX.API.Controllers
             s.enable = server.enable;
             s.forced = server.forced;
             s.weight = server.weight;
-            s.group = server.group;
+            s.groups = server.groups;
             s.workinghours = server.workinghours;
             s.geo_hide = server.geo_hide;
             s.limit = server.limit;
             s.limit_hard = server.limit_hard;
 
-            System.IO.File.WriteAllText($"{AppInit.appfolder}/settings.json", JsonConvert.SerializeObject(AppInit.settings, Formatting.Indented));
+            System.IO.File.WriteAllText($"{AppInit.appfolder}/settings.json", JsonConvert.SerializeObject(AppInit.settings, Formatting.Indented, new JsonSerializerSettings()
+            {
+                NullValueHandling = NullValueHandling.Ignore,
+                DefaultValueHandling = DefaultValueHandling.Ignore
+            }));
 
             return Json(s);
         }
