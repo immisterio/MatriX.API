@@ -46,7 +46,9 @@ namespace MatriX.API.Middlewares
             if (httpContext.Request.Path.Value.StartsWith("/favicon.ico"))
                 return httpContext.Response.SendFileAsync("favicon.ico");
 
-            if (!string.IsNullOrEmpty(AppInit.settings.domainid_pattern) && httpContext.Request.Host.Value != AppInit.settings.domainid_api && AppInit.settings.AuthorizationServerAPI != clientIp)
+            if (!string.IsNullOrEmpty(AppInit.settings.domainid_pattern) && 
+                httpContext.Request.Host.Value != AppInit.settings.domainid_api && 
+                AppInit.settings.AuthorizationServerAPI != clientIp)
             {
                 #region Авторизация по домену
                 string domainid = Regex.Match(httpContext.Request.Host.Value, AppInit.settings.domainid_pattern).Groups[1].Value;
