@@ -117,7 +117,7 @@ namespace MatriX.API.Controllers
             System.IO.File.WriteAllText($"{AppInit.appfolder}/settings.json", JsonConvert.SerializeObject(AppInit.settings, Formatting.Indented,
                 new JsonSerializerSettings
                 {
-                    ContractResolver = new CustomContractResolver(typeof(Setting), typeof(Server), typeof(ServerLimit)),
+                    ContractResolver = new CustomContractResolver(typeof(Setting), typeof(Server), typeof(ServerLimit), typeof(RateLimit)),
                     NullValueHandling = NullValueHandling.Ignore,
                     DefaultValueHandling = DefaultValueHandling.Ignore
                 }

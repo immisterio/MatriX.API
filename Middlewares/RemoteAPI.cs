@@ -54,7 +54,7 @@ namespace MatriX.API.Middlewares
                 }
 
                 // сервера с проверкой workinghours
-                Server[] working_servers = servers?.Where(i => i.status == 1 && i.workinghours != null && i.workinghours.Contains(DateTime.UtcNow.Hour))?.ToArray();
+                Server[] working_servers = servers?.Where(i => i.status == 1 && (i.workinghours == null || i.workinghours.Contains(DateTime.UtcNow.Hour)))?.ToArray();
 
                 if (working_servers == null || working_servers.Length == 0)
                 {

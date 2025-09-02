@@ -8,18 +8,22 @@ public class CustomContractResolver : DefaultContractResolver
 {
     private readonly Type settingType;
     private readonly Type serverType;
+    private readonly Type serverLimitType;
     private readonly Type rateLimitType;
     private readonly object defaultSetting;
     private readonly object defaultServer;
+    private readonly object defaultServerLimit;
     private readonly object defaultRateLimit;
 
-    public CustomContractResolver(Type settingType, Type serverType, Type rateLimitType)
+    public CustomContractResolver(Type settingType, Type serverType, Type serverLimitType, Type rateLimitType)
     {
         this.settingType = settingType;
         this.serverType = serverType;
+        this.serverLimitType = serverLimitType;
         this.rateLimitType = rateLimitType;
         defaultSetting = Activator.CreateInstance(settingType);
         defaultServer = Activator.CreateInstance(serverType);
+        defaultServerLimit = Activator.CreateInstance(serverLimitType);
         defaultRateLimit = Activator.CreateInstance(rateLimitType);
     }
 
@@ -58,6 +62,8 @@ public class CustomContractResolver : DefaultContractResolver
                         defaultValue = pi.GetValue(defaultSetting);
                     else if (serverType.IsInstanceOfType(instance))
                         defaultValue = pi.GetValue(defaultServer);
+                    else if (serverLimitType.IsInstanceOfType(instance))
+                        defaultValue = pi.GetValue(defaultServerLimit);
                     else if (rateLimitType.IsInstanceOfType(instance))
                         defaultValue = pi.GetValue(defaultRateLimit);
                 }
