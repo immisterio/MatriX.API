@@ -132,8 +132,21 @@ namespace MatriX.API
 
                             try
                             {
-                                if (!server.enable || string.IsNullOrEmpty(server.host))
+                                if (string.IsNullOrEmpty(server.host))
                                     continue;
+
+                                if (!server.enable)
+                                {
+                                    servhtop.enable = false;
+                                    servhtop.name = server.name;
+                                    servhtop.host = server.host;
+                                    servhtop.checkTime = DateTime.Now;
+                                    servhtop.group = server.group;
+                                    servhtop.groups = server.groups;
+                                    servhtop.workinghours = server.workinghours;
+                                    servers_stats.Add(servhtop);
+                                    continue;
+                                }
 
                                 if (server.host.Contains("127.0.0.1"))
                                 {
@@ -302,6 +315,7 @@ namespace MatriX.API
                             }
                             catch { server.status = 2; }
 
+                            servhtop.enable = server.enable;
                             servhtop.name = server.name;
                             servhtop.host = server.host;
                             servhtop.checkTime = DateTime.Now;

@@ -6,6 +6,8 @@ namespace MatriX.API.Models.Stats
     {
         public DateTime checkTime { get; set; }
 
+        public bool enable { get; set; }
+
         public string name { get; set; }
 
         public string host { get; set; }

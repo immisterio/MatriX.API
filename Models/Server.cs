@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace MatriX.API.Models
 {
@@ -36,12 +37,14 @@ namespace MatriX.API.Models
         /// 2 - отключен - недоступен
         /// 3 - отключен - лимит нагрузки
         /// </summary>
+        [JsonIgnore]
         public int status { get; set; }
 
         /// <summary>
         /// 0 - доступен
         /// 1 - недоступен (лимит нагрузки)
         /// </summary>
+        [JsonIgnore]
         public int status_hard { get; set; }
     }
 }

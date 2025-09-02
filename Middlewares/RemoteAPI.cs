@@ -65,7 +65,7 @@ namespace MatriX.API.Middlewares
                 }
 
                 // принудительный сервер для всех кто использует auto
-                string fserv = forcedServer(userData, working_servers.Where(i => i.forced)?.ToArray(), mem);
+                string fserv = forcedServer(userData, servers?.Where(i => i.forced)?.ToArray(), mem);
 
                 #region сервер к которому клиент уже привязан 
                 string mkey = $"RemoteAPI:serv:{userData.id}";
@@ -219,7 +219,7 @@ namespace MatriX.API.Middlewares
 
             if (isStream)
             {
-                if (httpContext.Request.Path.Value.StartsWith("/stream/") && Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|stat|m3u)(&|$)")) { }
+                if (httpContext.Request.Path.Value.StartsWith("/stream/") && Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|stat|m3u)(&|$)", RegexOptions.IgnoreCase)) { }
                 else
                 {
                     #region maxReadBytesToHour

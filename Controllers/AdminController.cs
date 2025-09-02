@@ -80,14 +80,43 @@ namespace MatriX.API.Controllers
         #endregion
 
         #region servers
+        [HttpGet]
         [Route("admin/servers")]
-        public ActionResult Servers()
+        public ActionResult ServersGet()
         {
             var userData = HttpContext.Features.Get<UserData>();
             if (userData == null || !userData.admin)
                 return Content("not admin");
 
-            return Content(JsonConvert.SerializeObject(AppInit.settings.servers, Formatting.Indented), "application/javascript; charset=utf-8");
+            return Json(AppInit.settings.servers);
+        }
+
+        [HttpPost]
+        [Route("admin/servers")]
+        public ActionResult ServersSet([FromBody] Server server)
+        {
+            var userData = HttpContext.Features.Get<UserData>();
+            if (userData == null || !userData.admin)
+                return Content("not admin");
+
+            var s = AppInit.settings.servers.FirstOrDefault(i => i.host == server.host);
+            if (s == null)
+                return Json(new { error = "not found server", server });
+
+            s.name = server.name;
+            s.host = server.host;
+            s.enable = server.enable;
+            s.forced = server.forced;
+            s.weight = server.weight;
+            s.group = server.group;
+            s.workinghours = server.workinghours;
+            s.geo_hide = server.geo_hide;
+            s.limit = server.limit;
+            s.limit_hard = server.limit_hard;
+
+            System.IO.File.WriteAllText($"{AppInit.appfolder}/settings.json", JsonConvert.SerializeObject(AppInit.settings, Formatting.Indented));
+
+            return Json(s);
         }
         #endregion
 
@@ -180,7 +209,7 @@ namespace MatriX.API.Controllers
             if (userData == null || !userData.admin)
                 return Content("not admin");
 
-            return Content(JsonConvert.SerializeObject(StatData.servers, Formatting.Indented), "application/javascript; charset=utf-8");
+            return Json(StatData.servers);
         }
         #endregion
 
