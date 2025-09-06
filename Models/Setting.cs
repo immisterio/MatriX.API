@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace MatriX.API.Models
 {
@@ -99,10 +100,28 @@ namespace MatriX.API.Models
         /// </summary>
         public bool AuthorizationRequired { get; set; } = true;
 
+
         /// <summary>
         /// IP сервера с которого принимать API запросы
         /// </summary>
         public string AuthorizationServerAPI { get; set; }
+
+        public string[] AuthorizationServersAPI { get; set; }
+
+        public bool IsAuthorizationServerAPI(string ip)
+        {
+            if (ip == null)
+                return false;
+
+            if (AuthorizationServerAPI == ip)
+                return true;
+
+            if (AuthorizationServersAPI != null && AuthorizationServersAPI.Contains(ip))
+                return true;
+
+            return false;
+        }
+
 
         /// <summary>
         /// Пароль по умолчанию

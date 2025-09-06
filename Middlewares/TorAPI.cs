@@ -423,7 +423,7 @@ namespace MatriX.API.Middlewares
 
             if (httpContext.Request.Path.Value.StartsWith("/shutdown"))
             {
-                if (info.user.shutdown || AppInit.settings.AuthorizationServerAPI == info.user._ip)
+                if (info.user.shutdown || AppInit.settings.IsAuthorizationServerAPI(info.user._ip))
                 {
                     info.Dispose();
                     db.TryRemove(info.user.id, out _);

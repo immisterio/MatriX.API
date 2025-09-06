@@ -47,8 +47,8 @@ namespace MatriX.API.Middlewares
                 return httpContext.Response.SendFileAsync("favicon.ico");
 
             if (!string.IsNullOrEmpty(AppInit.settings.domainid_pattern) && 
-                httpContext.Request.Host.Value != AppInit.settings.domainid_api && 
-                AppInit.settings.AuthorizationServerAPI != clientIp)
+                httpContext.Request.Host.Value != AppInit.settings.domainid_api &&
+                AppInit.settings.IsAuthorizationServerAPI(clientIp) == false)
             {
                 #region Авторизация по домену
                 string domainid = Regex.Match(httpContext.Request.Host.Value, AppInit.settings.domainid_pattern).Groups[1].Value;
@@ -115,7 +115,7 @@ namespace MatriX.API.Middlewares
 
                         if (!string.IsNullOrEmpty(login) && !string.IsNullOrEmpty(passwd))
                         {
-                            if (AppInit.settings.AuthorizationServerAPI == clientIp)
+                            if (AppInit.settings.IsAuthorizationServerAPI(clientIp))
                             {
                                 long maxSize = 0;
                                 if (httpContext.Request.Headers.ContainsKey("X-maxSize") && long.TryParse(httpContext.Request.Headers["X-maxSize"].ToString(), out long _maxSize))
@@ -193,7 +193,7 @@ namespace MatriX.API.Middlewares
                                     httpContext.Features.Set(new UserData() { id = login, login = login, passwd = passwd, _ip = clientIp, expires = DateTime.Now.AddDays(1) });
                                     return _next(httpContext);
                                 }
-                                else if (!string.IsNullOrEmpty(AppInit.settings.AuthorizationServerAPI))
+                                else if (!string.IsNullOrEmpty(AppInit.settings.AuthorizationServerAPI) || AppInit.settings.AuthorizationServersAPI != null)
                                 {
                                     httpContext.Response.ContentType = "text/plain; charset=utf-8";
                                     return httpContext.Response.WriteAsync($"Указанный IP в AuthorizationServerAPI для {httpContext.Request.Host.Value} не совпадает с {clientIp}");
