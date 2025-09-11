@@ -206,147 +206,164 @@ namespace MatriX.API.Middlewares
 
             if (startNewTS)
             {
-                var port = goPort();
-                while (IsPortInUse(port.ts) || IsPortInUse(port.peersListen))
-                    port = goPort();
-
-                info.port = port.ts;
-
-                #region Создаем папку пользователя
-                if (!File.Exists($"{inDir}/sandbox/{info.user.id}/settings.json"))
+                try
                 {
-                    Directory.CreateDirectory($"{inDir}/sandbox/{info.user.id}");
-                    File.Copy($"{inDir}/TorrServer/{info.user.default_settings}", $"{inDir}/sandbox/{info.user.id}/settings.json");
-                }
-                #endregion
+                    Bash.Run($"kill -15 $(ps axu | egrep \"/sandbox/{info.user.id}$\" | grep -v grep | awk '{{print $2}}')");
 
-                #region Обновляем настройки по умолчанию
-                {
-                    string default_settings = File.ReadAllText($"{inDir}/TorrServer/{info.user.default_settings}");
+                    var port = goPort();
+                    while (IsPortInUse(port.ts) || IsPortInUse(port.peersListen))
+                        port = goPort();
 
-                    if (info.user.allowedToChangeSettings)
+                    info.port = port.ts;
+
+                    #region Создаем папку пользователя
+                    if (!File.Exists($"{inDir}/sandbox/{info.user.id}/settings.json"))
                     {
-                        string user_settings = File.ReadAllText($"{inDir}/sandbox/{info.user.id}/settings.json");
-
-                        string ReaderReadAHead = Regex.Match(user_settings, "\"ReaderReadAHead\":([^,]+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
-                        string PreloadCache = Regex.Match(user_settings, "\"PreloadCache\":([^,]+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
-
-                        default_settings = Regex.Replace(default_settings, "(\"ReaderReadAHead\"):([^,]+)", $"$1:{ReaderReadAHead}", RegexOptions.IgnoreCase);
-                        default_settings = Regex.Replace(default_settings, "(\"PreloadCache\"):([^,]+)", $"$1:{PreloadCache}", RegexOptions.IgnoreCase);
-
-                        default_settings = Regex.Replace(default_settings, "(\"PeersListenPort\"):([^,]+)", $"$1:{port.peersListen}", RegexOptions.IgnoreCase);
-
-                        File.WriteAllText($"{inDir}/sandbox/{info.user.id}/settings.json", default_settings);
+                        Directory.CreateDirectory($"{inDir}/sandbox/{info.user.id}");
+                        File.Copy($"{inDir}/TorrServer/{info.user.default_settings}", $"{inDir}/sandbox/{info.user.id}/settings.json");
                     }
-                    else if (!File.Exists($"{inDir}/sandbox/{info.user.id}/settings.json"))
-                        File.WriteAllText($"{inDir}/sandbox/{info.user.id}/settings.json", default_settings);
-                }
-                #endregion
+                    #endregion
 
-                #region Отслеживанием падение процесса
-                info.processForExit += (s, e) =>
-                {
-                    if (info.thread == null)
-                        return;
-
-                    try
+                    #region Обновляем настройки по умолчанию
                     {
-                        if (!string.IsNullOrWhiteSpace(info.process_log) && !info.user.shared)
-                            File.AppendAllText($"logs/process/{info.user.id}_exit.txt", $"{DateTime.Now}\n\n{info.process_log}\n\n==============================\n\n\n\n");
-                    }
-                    catch { }
+                        string default_settings = File.ReadAllText($"{inDir}/TorrServer/{info.user.default_settings}");
 
-                    info.Dispose();
-                    db.TryRemove(info.user.id, out _);
-                    logAction(info.user.id, "stop - processForExit");
-                };
-                #endregion
-
-                #region Запускаем TorrServer
-                info.thread = new Thread(() =>
-                {
-                    try
-                    {
-                        File.WriteAllText($"{inDir}/sandbox/{info.user.id}/accs.db", $"{{\"ts\":\"{passwd}\"}}");
-
-                        string arguments = $"--httpauth -p {info.port} -d {inDir}/sandbox/{info.user.id}";
-
-                        if (info.user.maxSize > 0)
-                            arguments += $" -m {info.user.maxSize}";
-                        else if (AppInit.groupSettings(info.user.group).maxSize > 0 && info.user.maxSize != -1)
-                            arguments += $" -m {AppInit.groupSettings(info.user.group).maxSize}";
-
-                        if (!string.IsNullOrEmpty(AppInit.groupSettings(info.user.group).tsargs ?? AppInit.settings.tsargs))
-                            arguments += $" {(AppInit.groupSettings(info.user.group).tsargs ?? AppInit.settings.tsargs).Trim()}";
-
-                        var processInfo = new ProcessStartInfo();
-                        processInfo.UseShellExecute = false;
-                        processInfo.RedirectStandardError = true;
-                        processInfo.RedirectStandardOutput = true;
-                        processInfo.FileName = $"{inDir}/TorrServer/{version}";
-                        processInfo.Arguments = arguments;
-
-                        var process = Process.Start(processInfo);
-                        if (process != null)
+                        if (info.user.allowedToChangeSettings)
                         {
-                            process.OutputDataReceived += (sender, args) =>
-                            {
-                                if (!string.IsNullOrEmpty(args.Data))
-                                    info.process_log += args.Data + "\n";
-                            };
+                            string user_settings = File.ReadAllText($"{inDir}/sandbox/{info.user.id}/settings.json");
 
-                            process.ErrorDataReceived += (sender, args) =>
-                            {
-                                if (!string.IsNullOrEmpty(args.Data))
-                                    info.process_log += args.Data + "\n";
-                            };
+                            string ReaderReadAHead = Regex.Match(user_settings, "\"ReaderReadAHead\":([^,]+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
+                            string PreloadCache = Regex.Match(user_settings, "\"PreloadCache\":([^,]+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
 
-                            info.process = process;
-                            process.BeginOutputReadLine();
-                            process.BeginErrorReadLine();
-                            process.WaitForExit();
+                            default_settings = Regex.Replace(default_settings, "(\"ReaderReadAHead\"):([^,]+)", $"$1:{ReaderReadAHead}", RegexOptions.IgnoreCase);
+                            default_settings = Regex.Replace(default_settings, "(\"PreloadCache\"):([^,]+)", $"$1:{PreloadCache}", RegexOptions.IgnoreCase);
+
+                            default_settings = Regex.Replace(default_settings, "(\"PeersListenPort\"):([^,]+)", $"$1:{port.peersListen}", RegexOptions.IgnoreCase);
+
+                            File.WriteAllText($"{inDir}/sandbox/{info.user.id}/settings.json", default_settings);
                         }
-                        else
-                        {
-                            info.exception = "process == null";
-                        }
+                        else if (!File.Exists($"{inDir}/sandbox/{info.user.id}/settings.json"))
+                            File.WriteAllText($"{inDir}/sandbox/{info.user.id}/settings.json", default_settings);
                     }
-                    catch (Exception ex)
+                    #endregion
+
+                    #region Отслеживанием падение процесса
+                    info.processForExit += (s, e) =>
                     {
-                        info.exception = ex.ToString();
+                        if (info.thread == null)
+                            return;
 
                         try
                         {
-                            File.AppendAllText($"logs/process/{info.user.id}_error.txt", $"{DateTime.Now}\n\n{info.exception}\n\n{info.process_log}\n\n==============================\n\n\n\n");
+                            if (!string.IsNullOrWhiteSpace(info.process_log) && !info.user.shared)
+                                File.AppendAllText($"logs/process/{info.user.id}_exit.txt", $"{DateTime.Now}\n\n{info.process_log}\n\n==============================\n\n\n\n");
                         }
                         catch { }
+
+                        info.Dispose();
+                        db.TryRemove(info.user.id, out _);
+                        logAction(info.user.id, "stop - processForExit");
+                    };
+                    #endregion
+
+                    #region Запускаем TorrServer
+                    info.thread = new Thread(() =>
+                    {
+                        try
+                        {
+                            File.WriteAllText($"{inDir}/sandbox/{info.user.id}/accs.db", $"{{\"ts\":\"{passwd}\"}}");
+
+                            string arguments = $"--httpauth -p {info.port} -d {inDir}/sandbox/{info.user.id}";
+
+                            if (info.user.maxSize > 0)
+                                arguments += $" -m {info.user.maxSize}";
+                            else if (AppInit.groupSettings(info.user.group).maxSize > 0 && info.user.maxSize != -1)
+                                arguments += $" -m {AppInit.groupSettings(info.user.group).maxSize}";
+
+                            if (!string.IsNullOrEmpty(AppInit.groupSettings(info.user.group).tsargs ?? AppInit.settings.tsargs))
+                                arguments += $" {(AppInit.groupSettings(info.user.group).tsargs ?? AppInit.settings.tsargs).Trim()}";
+
+                            var processInfo = new ProcessStartInfo();
+                            processInfo.UseShellExecute = false;
+                            processInfo.RedirectStandardError = true;
+                            processInfo.RedirectStandardOutput = true;
+                            processInfo.FileName = $"{inDir}/TorrServer/{version}";
+                            processInfo.Arguments = arguments;
+
+                            var process = Process.Start(processInfo);
+                            if (process != null)
+                            {
+                                process.OutputDataReceived += (sender, args) =>
+                                {
+                                    if (!string.IsNullOrEmpty(args.Data))
+                                        info.process_log += args.Data + "\n";
+                                };
+
+                                process.ErrorDataReceived += (sender, args) =>
+                                {
+                                    if (!string.IsNullOrEmpty(args.Data))
+                                        info.process_log += args.Data + "\n";
+                                };
+
+                                info.process = process;
+                                process.BeginOutputReadLine();
+                                process.BeginErrorReadLine();
+                                process.WaitForExit();
+                            }
+                            else
+                            {
+                                info.exception = "process == null";
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            info.exception = ex.ToString();
+
+                            try
+                            {
+                                File.AppendAllText($"logs/process/{info.user.id}_error.txt", $"{DateTime.Now}\n\n{info.exception}\n\n{info.process_log}\n\n==============================\n\n\n\n");
+                            }
+                            catch { }
+                        }
+
+                        info.OnProcessForExit();
+                    });
+
+                    info.thread.Start();
+                    #endregion
+
+                    #region Проверяем доступность сервера
+                    if (await CheckPort(info.port, info) == false)
+                    {
+                        info.taskCompletionSource.SetResult(false);
+                        info.taskCompletionSource = null;
+
+                        if (info.thread != null)
+                            logAction(info.user.id, "stop - checkport");
+
+                        info.Dispose();
+                        db.TryRemove(info.user.id, out _);
+                        await httpContext.Response.WriteAsync(info?.exception ?? "failed to start", httpContext.RequestAborted).ConfigureAwait(false);
+                        return;
                     }
+                    #endregion
 
-                    info.OnProcessForExit();
-                });
-
-                info.thread.Start();
-                #endregion
-
-                #region Проверяем доступность сервера
-                if (await CheckPort(info.port, info) == false)
+                    logAction(info.user.id, "start ok");
+                    info.taskCompletionSource.SetResult(true);
+                    info.taskCompletionSource = null;
+                }
+                catch (Exception ex) 
                 {
+                    info.Dispose();
+                    db.TryRemove(info.user.id, out _);
+
+                    logAction(info.user.id, "start exception" + ex.Message);
                     info.taskCompletionSource.SetResult(false);
                     info.taskCompletionSource = null;
 
-                    if (info.thread != null)
-                        logAction(info.user.id, "stop - checkport");
-
-                    info.Dispose();
-                    db.TryRemove(info.user.id, out _);
-                    await httpContext.Response.WriteAsync(info?.exception ?? "failed to start", httpContext.RequestAborted).ConfigureAwait(false);
+                    await httpContext.Response.WriteAsync(ex.Message, httpContext.RequestAborted).ConfigureAwait(false);
                     return;
                 }
-                #endregion
-
-                logAction(info.user.id, "start ok");
-                info.taskCompletionSource.SetResult(true);
-                info.taskCompletionSource = null;
             }
 
             if (info.taskCompletionSource != null)

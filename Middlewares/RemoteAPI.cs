@@ -1,5 +1,4 @@
 ﻿using MatriX.API.Models;
-using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using System;
@@ -231,12 +230,19 @@ namespace MatriX.API.Middlewares
                     }
                     #endregion
 
-                    if (AppInit.settings.remoteStream_pattern != null)
+                    if (AppInit.settings.remoteStream_pattern != null && AppInit.settings.remoteStream_server != null)
                     {
                         string domainid = userData.login ?? userData.domainid;
                         var g = Regex.Match(serip, AppInit.settings.remoteStream_pattern).Groups;
 
-                        httpContext.Response.Redirect($"{g["sheme"]}://{domainid}.{g["server"]}" + clearUri);
+                        string remoteStream_server = AppInit.settings.remoteStream_server
+                                                            .Replace("{current_server}", httpContext.Request.Host.Value.Replace($"{domainid}.", ""))
+                                                            .Replace("{server}", g["server"].Value)
+                                                            .Replace("{current_scheme}", httpContext.Request.Scheme)
+                                                            .Replace("{scheme}", g["scheme"].Value)
+                                                            .Replace("{domainid}", domainid);
+
+                        httpContext.Response.Redirect(remoteStream_server + clearUri);
                         return;
                     }
                     else

@@ -80,6 +80,8 @@ namespace MatriX.API.Models
 
         public string remoteStream_pattern { get; set; } = "(?<sheme>https?)://slave.(?<server>[^/]+)";
 
+        public string remoteStream_server { get; set; }
+
         /// <summary>
         /// API домен для domainid авторизации
         /// </summary>
