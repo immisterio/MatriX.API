@@ -236,11 +236,12 @@ namespace MatriX.API.Middlewares
                         var g = Regex.Match(serip, AppInit.settings.remoteStream_pattern).Groups;
 
                         string remoteStream_server = AppInit.settings.remoteStream_server
-                                                            .Replace("{current_server}", httpContext.Request.Host.Value.Replace($"{domainid}.", ""))
                                                             .Replace("{server}", g["server"].Value)
-                                                            .Replace("{current_scheme}", httpContext.Request.Scheme)
                                                             .Replace("{scheme}", g["scheme"].Value)
-                                                            .Replace("{domainid}", domainid);
+                                                            .Replace("{domainid}", domainid)
+                                                            .Replace("{current_server}", httpContext.Request.Host.Value.Replace($"{domainid}.", ""))
+                                                            .Replace("{current_scheme}", httpContext.Request.Scheme)
+                                                            .Replace("{current_port}", httpContext.Request.Host.Port?.ToString() ?? string.Empty);
 
                         httpContext.Response.Redirect(remoteStream_server + clearUri);
                         return;
