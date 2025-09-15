@@ -240,6 +240,7 @@ namespace MatriX.API.Middlewares
                                                             .Replace("{scheme}", g["scheme"].Value)
                                                             .Replace("{domainid}", domainid)
                                                             .Replace("{current_server}", httpContext.Request.Host.Value.Replace($"{domainid}.", ""))
+                                                            .Replace("{current_domain}", Regex.Match(httpContext.Request.Host.Value, "([^\\.]+\\.[^\\.]+)$").Groups[1].Value)
                                                             .Replace("{current_scheme}", httpContext.Request.Scheme)
                                                             .Replace("{current_port}", httpContext.Request.Host.Port?.ToString() ?? string.Empty);
 
