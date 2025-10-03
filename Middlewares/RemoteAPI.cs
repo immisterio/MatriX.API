@@ -211,8 +211,8 @@ namespace MatriX.API.Middlewares
 
             memory.Set($"RemoteAPI:{userData._ip}", userData, DateTime.Now.AddDays(1));
 
-            string clearPath = HttpUtility.UrlDecode(httpContext.Request.Path.Value.Replace("/userdata/slave", "/userdata"));
-            clearPath = Regex.Replace(clearPath, "[а-яА-Я]", "z");
+            string clearPath = httpContext.Request.Path.Value.Replace("/userdata/slave", "/userdata");
+            clearPath = Regex.Replace(clearPath, "[^a-zA-Z0-9/\\.\\-]", "");
 
             string clearUri = Regex.Replace(clearPath + httpContext.Request.QueryString.Value, @"[^\x00-\x7F]", "");
 
