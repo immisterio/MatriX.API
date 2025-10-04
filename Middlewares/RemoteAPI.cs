@@ -238,6 +238,7 @@ namespace MatriX.API.Middlewares
             if (isStream)
             {
                 if (httpContext.Request.Path.Value.StartsWith("/stream/") && Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|stat|m3u)(&|$)", RegexOptions.IgnoreCase)) { }
+                else if (httpContext.Request.Path.Value == "/playlistall/all.m3u") { }
                 else
                 {
                     #region maxReadBytesToHour
@@ -270,9 +271,6 @@ namespace MatriX.API.Middlewares
                 {
                     string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                    httpContext.Response.StatusCode = (int)response.StatusCode;
-                    httpContext.Response.ContentLength = response.Content.Headers.ContentLength;
-
                     #region UpdateHeaders
                     void UpdateHeaders(HttpHeaders headers)
                     {
@@ -297,13 +295,19 @@ namespace MatriX.API.Middlewares
                     UpdateHeaders(response.Content.Headers);
 
                     #region playlist
-                    if ((httpContext.Request.Path.Value.StartsWith("/stream/") && httpContext.Request.QueryString.Value.Contains("&m3u"))
-                        || httpContext.Request.Path.Value.StartsWith("/playlist/"))
+                    if (httpContext.Request.Path.Value == "/playlistall/all.m3u")
+                    {
+                        result = Regex.Replace(result, "https?://[^/]+", $"{httpContext.Request.Scheme}://{httpContext.Request.Host.Value}");
+                    }
+                    else if (httpContext.Request.Path.Value.StartsWith("/stream/") && httpContext.Request.QueryString.Value.Contains("&m3u"))
                     {
                         if (response.Content?.Headers?.ContentType?.MediaType == "audio/x-mpegurl" && remoteStream_server != null)
                             result = Regex.Replace(result, "https?://[^/]+", remoteStream_server);
                     }
                     #endregion
+
+                    httpContext.Response.ContentLength = result.Length;
+                    httpContext.Response.StatusCode = (int)response.StatusCode;
 
                     await httpContext.Response.WriteAsync(result, httpContext.RequestAborted).ConfigureAwait(false);
                 }
