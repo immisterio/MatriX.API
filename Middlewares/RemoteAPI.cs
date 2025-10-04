@@ -216,6 +216,25 @@ namespace MatriX.API.Middlewares
 
             string clearUri = Regex.Replace(clearPath + httpContext.Request.QueryString.Value, @"[^\x00-\x7F]", "");
 
+            #region remoteStream_server
+            string remoteStream_server = null;
+
+            if (AppInit.settings.remoteStream_pattern != null && AppInit.settings.remoteStream_server != null)
+            {
+                string domainid = userData.login ?? userData.domainid;
+                var g = Regex.Match(serip, AppInit.settings.remoteStream_pattern).Groups;
+
+                remoteStream_server = AppInit.settings.remoteStream_server
+                    .Replace("{server}", g["server"].Value)
+                    .Replace("{scheme}", g["scheme"].Value)
+                    .Replace("{domainid}", domainid)
+                    .Replace("{current_server}", httpContext.Request.Host.Value.Replace($"{domainid}.", ""))
+                    .Replace("{current_domain}", Regex.Match(httpContext.Request.Host.Value, "([^\\.]+\\.[^\\.]+)$").Groups[1].Value)
+                    .Replace("{current_scheme}", httpContext.Request.Scheme)
+                    .Replace("{current_port}", httpContext.Request.Host.Port?.ToString() ?? string.Empty);
+            }
+            #endregion
+
             if (isStream)
             {
                 if (httpContext.Request.Path.Value.StartsWith("/stream/") && Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|stat|m3u)(&|$)", RegexOptions.IgnoreCase)) { }
@@ -230,20 +249,8 @@ namespace MatriX.API.Middlewares
                     }
                     #endregion
 
-                    if (AppInit.settings.remoteStream_pattern != null && AppInit.settings.remoteStream_server != null)
+                    if (remoteStream_server != null)
                     {
-                        string domainid = userData.login ?? userData.domainid;
-                        var g = Regex.Match(serip, AppInit.settings.remoteStream_pattern).Groups;
-
-                        string remoteStream_server = AppInit.settings.remoteStream_server
-                                                            .Replace("{server}", g["server"].Value)
-                                                            .Replace("{scheme}", g["scheme"].Value)
-                                                            .Replace("{domainid}", domainid)
-                                                            .Replace("{current_server}", httpContext.Request.Host.Value.Replace($"{domainid}.", ""))
-                                                            .Replace("{current_domain}", Regex.Match(httpContext.Request.Host.Value, "([^\\.]+\\.[^\\.]+)$").Groups[1].Value)
-                                                            .Replace("{current_scheme}", httpContext.Request.Scheme)
-                                                            .Replace("{current_port}", httpContext.Request.Host.Port?.ToString() ?? string.Empty);
-
                         httpContext.Response.Redirect(remoteStream_server + clearUri);
                         return;
                     }
@@ -258,37 +265,48 @@ namespace MatriX.API.Middlewares
             using (var client = httpClientFactory.CreateClient("base"))
             {
                 var request = CreateProxyHttpRequest(httpContext, new Uri($"{serip}{clearUri}"), userData, serip);
-                var response = await client.SendAsync(request, httpContext.RequestAborted).ConfigureAwait(false);
 
-                string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-                httpContext.Response.StatusCode = (int)response.StatusCode;
-                httpContext.Response.ContentLength = response.Content.Headers.ContentLength;
-
-                #region UpdateHeaders
-                void UpdateHeaders(HttpHeaders headers)
+                using (var response = await client.SendAsync(request, httpContext.RequestAborted).ConfigureAwait(false))
                 {
-                    foreach (var header in headers)
+                    string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                    httpContext.Response.StatusCode = (int)response.StatusCode;
+                    httpContext.Response.ContentLength = response.Content.Headers.ContentLength;
+
+                    #region UpdateHeaders
+                    void UpdateHeaders(HttpHeaders headers)
                     {
-                        try
+                        foreach (var header in headers)
                         {
-                            if (header.Key.ToLower() is "www-authenticate" or "transfer-encoding" or "etag" or "connection" or "content-disposition")
-                                continue;
+                            try
+                            {
+                                if (header.Key.ToLower() is "www-authenticate" or "transfer-encoding" or "etag" or "connection" or "content-disposition")
+                                    continue;
 
-                            if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
-                                continue;
+                                if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
+                                    continue;
 
-                            httpContext.Response.Headers.TryAdd(header.Key, header.Value.ToArray());
+                                httpContext.Response.Headers.TryAdd(header.Key, header.Value.ToArray());
+                            }
+                            catch { }
                         }
-                        catch { }
                     }
+                    #endregion
+
+                    UpdateHeaders(response.Headers);
+                    UpdateHeaders(response.Content.Headers);
+
+                    #region playlist
+                    if ((httpContext.Request.Path.Value.StartsWith("/stream/") && httpContext.Request.QueryString.Value.Contains("&m3u"))
+                        || httpContext.Request.Path.Value.StartsWith("/playlist/"))
+                    {
+                        if (response.Content?.Headers?.ContentType?.MediaType == "audio/x-mpegurl" && remoteStream_server != null)
+                            result = Regex.Replace(result, "https?://[^/]+", remoteStream_server);
+                    }
+                    #endregion
+
+                    await httpContext.Response.WriteAsync(result, httpContext.RequestAborted).ConfigureAwait(false);
                 }
-                #endregion
-
-                UpdateHeaders(response.Headers);
-                UpdateHeaders(response.Content.Headers);
-
-                await httpContext.Response.WriteAsync(result, httpContext.RequestAborted).ConfigureAwait(false);
             }
         }
 
