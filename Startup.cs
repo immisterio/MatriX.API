@@ -30,6 +30,8 @@ namespace MatriX.API
                 options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
                 options.JsonSerializerOptions.PropertyNamingPolicy = null;
             });
+
+            services.AddResponseCompression();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IHttpClientFactory _httpClientFactory)
@@ -53,6 +55,9 @@ namespace MatriX.API
             #endregion
 
             app.UseRouting();
+            app.UseResponseCompression();
+            
+            app.UseRequestLogging();
             app.UseModHeaders();
             app.UseAccs();
             app.UseIPTables();

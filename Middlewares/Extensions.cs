@@ -4,6 +4,11 @@ namespace MatriX.API.Middlewares
 {
     public static class Extensions
     {
+        public static IApplicationBuilder UseRequestLogging(this IApplicationBuilder builder)
+        {
+            return builder.UseMiddleware<RequestLoggingMiddleware>();
+        }
+
         public static IApplicationBuilder UseModHeaders(this IApplicationBuilder builder)
         {
             return builder.UseMiddleware<ModHeaders>();

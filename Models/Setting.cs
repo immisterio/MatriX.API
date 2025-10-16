@@ -5,6 +5,8 @@ namespace MatriX.API.Models
 {
     public class Setting
     {
+        public bool log { get; set; }
+
         /// <summary>
         /// Порт сервера
         /// </summary>
