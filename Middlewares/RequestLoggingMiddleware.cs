@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
+using System.Text.RegularExpressions;
 
 namespace MatriX.API.Middlewares
 {
@@ -43,10 +44,6 @@ namespace MatriX.API.Middlewares
                 return;
             }
 
-            var startTime = DateTime.Now;
-            var method = context.Request.Method;
-            var url = context.Request.Path + context.Request.QueryString;
-
             var originalBody = context.Response.Body;
             var countingStream = new ResponseBodyCountingStream(originalBody);
             context.Response.Body = countingStream;
@@ -60,9 +57,41 @@ namespace MatriX.API.Middlewares
             finally
             {
                 context.Response.Body = originalBody;
-                var bytesWritten = countingStream.BytesWritten;
-                var timeString = startTime.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                var logLine = $"{timeString} - {method} - {bytesWritten} - {url}";
+
+                string logLine = AppInit.settings.logformat;
+                logLine = logLine.Replace("{time}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"))
+                                 .Replace("{ip}", context.Connection.RemoteIpAddress?.ToString() ?? "-")
+                                 .Replace("{bytes}", countingStream.BytesWritten.ToString())
+                                 .Replace("{method}", context.Request.Method)
+                                 .Replace("{host}", context.Request.Host.Host ?? "-")
+                                 .Replace("{url}", context.Request.Path + context.Request.QueryString);
+
+                try
+                {
+                    var headerRegex = new Regex("\\{headers:([^}]+)\\}", RegexOptions.IgnoreCase);
+                    logLine = headerRegex.Replace(logLine, match =>
+                    {
+                        try
+                        {
+                            var headerName = match.Groups[1].Value.Trim();
+                            if (string.IsNullOrEmpty(headerName))
+                                return string.Empty;
+
+                            if (context.Request.Headers.TryGetValue(headerName, out var values))
+                                return string.Join(",", values.ToArray());
+
+                            foreach (var h in context.Request.Headers)
+                            {
+                                if (string.Equals(h.Key, headerName, StringComparison.OrdinalIgnoreCase))
+                                    return string.Join(",", h.Value.ToArray());
+                            }
+
+                            return string.Empty;
+                        }
+                        catch { return string.Empty; }
+                    });
+                }
+                catch { }
 
                 if (_logWriter != null)
                 {
@@ -74,11 +103,11 @@ namespace MatriX.API.Middlewares
             }
         }
 
-        // Simple wrapper stream that counts bytes written
+
         private sealed class ResponseBodyCountingStream : Stream
         {
             private readonly Stream _inner;
-            // use a backing field so we can pass it by ref to Interlocked APIs
+
             private long _bytesWritten;
 
             public long BytesWritten => Interlocked.Read(ref _bytesWritten);

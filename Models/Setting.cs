@@ -8,6 +8,11 @@ namespace MatriX.API.Models
         public bool log { get; set; }
 
         /// <summary>
+        /// Формат логирования запросов
+        /// </summary>
+        public string logformat { get; set; } = "\"{time}\" - \"{ip}\" - \"{bytes}\" - \"{method}\" - \"{host}\" - \"{url}\" - \"{headers:User-Agent}\"";
+
+        /// <summary>
         /// Порт сервера
         /// </summary>
         public int port { get; set; } = 8090;
