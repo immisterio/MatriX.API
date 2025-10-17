@@ -215,7 +215,7 @@ namespace MatriX.API.Controllers
                 }
             }
 
-            return Content(JsonConvert.SerializeObject(serers), "application/javascript; charset=utf-8");
+            return Content(JsonConvert.SerializeObject(serers), "application/json; charset=utf-8");
         }
         #endregion
 

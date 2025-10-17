@@ -278,7 +278,7 @@ namespace MatriX.API.Middlewares
                         {
                             try
                             {
-                                if (header.Key.ToLower() is "www-authenticate" or "transfer-encoding" or "etag" or "connection" or "content-disposition")
+                                if (header.Key.ToLower() is "www-authenticate" or "transfer-encoding" or "etag" or "connection" or "content-disposition" or "content-encoding")
                                     continue;
 
                                 if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
@@ -363,7 +363,6 @@ namespace MatriX.API.Middlewares
             if (AppInit.settings.servers != null && serip != null)
                 requestMessage.Headers.Add("X-SlaveName", HttpUtility.UrlEncode(AppInit.settings.servers.FirstOrDefault(i => i.host != null && i.host.StartsWith(serip))?.name ?? "unknown"));
 
-            requestMessage.Headers.ConnectionClose = false;
             requestMessage.Headers.Host = uri.Authority;
             requestMessage.RequestUri = uri;
             requestMessage.Method = request == null ? new HttpMethod("GET") : new HttpMethod(request.Method);

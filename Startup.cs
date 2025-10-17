@@ -2,7 +2,9 @@ using MatriX.API.Middlewares;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Text.Json.Serialization;
 
@@ -14,11 +16,23 @@ namespace MatriX.API
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddHttpClient("ts").ConfigurePrimaryHttpMessageHandler(() =>
+            {
+                var handler = new HttpClientHandler()
+                {
+                    AutomaticDecompression = System.Net.DecompressionMethods.None,
+                    AllowAutoRedirect = true
+                };
+
+                handler.ServerCertificateCustomValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
+                return handler;
+            });
+
             services.AddHttpClient("base").ConfigurePrimaryHttpMessageHandler(() =>
             {
                 var handler = new HttpClientHandler()
                 {
-                    AutomaticDecompression = System.Net.DecompressionMethods.All,
+                    AutomaticDecompression = System.Net.DecompressionMethods.GZip,
                     AllowAutoRedirect = true
                 };
 
@@ -31,7 +45,18 @@ namespace MatriX.API
                 options.JsonSerializerOptions.PropertyNamingPolicy = null;
             });
 
-            services.AddResponseCompression();
+            services.AddResponseCompression(options =>
+            {
+                options.Providers.Clear();
+                options.Providers.Add<GzipCompressionProvider>();
+                options.MimeTypes = ["application/json", "application/json; charset=utf-8"];
+                options.EnableForHttps = true;
+            });
+
+            services.Configure<GzipCompressionProviderOptions>(o =>
+            {
+                o.Level = CompressionLevel.SmallestSize;
+            });
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IHttpClientFactory _httpClientFactory)

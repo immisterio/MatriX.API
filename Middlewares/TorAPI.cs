@@ -389,10 +389,9 @@ namespace MatriX.API.Middlewares
                     return;
                 }
 
-                using (var client = httpClientFactory.CreateClient("base"))
+                using (var client = httpClientFactory.CreateClient("ts"))
                 {
                     client.Timeout = TimeSpan.FromSeconds(5);
-                    client.DefaultRequestHeaders.ConnectionClose = false;
                     client.DefaultRequestHeaders.Add("Authorization", Authorization());
 
                     #region Данные запроса
@@ -438,6 +437,7 @@ namespace MatriX.API.Middlewares
             }
             #endregion
 
+            #region shutdown
             if (httpContext.Request.Path.Value.StartsWith("/shutdown"))
             {
                 if (info.user.shutdown || AppInit.settings.IsAuthorizationServerAPI(info.user._ip))
@@ -450,6 +450,7 @@ namespace MatriX.API.Middlewares
                 await httpContext.Response.WriteAsync("OK", httpContext.RequestAborted).ConfigureAwait(false);
                 return;
             }
+            #endregion
 
             #region maxReadBytesToHour
             ulong maxReadBytes = AppInit.groupSettings(info.user.group).maxReadBytesToHour;
@@ -466,7 +467,7 @@ namespace MatriX.API.Middlewares
 
             string servUri = $"http://127.0.0.1:{info.port}{Regex.Replace(clearPath + httpContext.Request.QueryString.Value, @"[^\x00-\x7F]", "")}";
 
-            using (var client = httpClientFactory.CreateClient("base"))
+            using (var client = httpClientFactory.CreateClient("ts"))
             {
                 var request = CreateProxyHttpRequest(httpContext, new Uri(servUri));
                 var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, httpContext.RequestAborted).ConfigureAwait(false);
@@ -478,7 +479,20 @@ namespace MatriX.API.Middlewares
                     return;
                 }
 
-                await CopyProxyHttpResponse(httpContext, response, info).ConfigureAwait(false);
+                var contentType = response.Content.Headers.ContentType;
+                var mediaType = contentType?.MediaType;
+
+                if (mediaType != null && (string.Equals(mediaType, "application/json", StringComparison.OrdinalIgnoreCase) || mediaType.EndsWith("+json", StringComparison.OrdinalIgnoreCase)))
+                {
+                    string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                    httpContext.Response.ContentType = "application/json; charset=utf-8";
+                    await httpContext.Response.WriteAsync(result, httpContext.RequestAborted).ConfigureAwait(false);
+                }
+                else
+                {
+                    await CopyProxyHttpResponse(httpContext, response, info).ConfigureAwait(false);
+                }
             }
             #endregion
         }
@@ -596,13 +610,11 @@ namespace MatriX.API.Middlewares
                 }
             }
 
-            using (var client = httpClientFactory.CreateClient("base"))
+            using (var client = httpClientFactory.CreateClient("ts"))
             {
                 client.Timeout = TimeSpan.FromSeconds(8);
-                client.DefaultRequestHeaders.ConnectionClose = false;
                 client.DefaultRequestHeaders.Add("Authorization", Authorization());
 
-                
                 var response = await client.GetAsync($"http://127.0.0.1:{info.port}{"/search/" + httpContext.Request.QueryString.Value}", httpContext.RequestAborted).ConfigureAwait(false);
                 string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
@@ -675,7 +687,7 @@ namespace MatriX.API.Middlewares
             {
                 try
                 {
-                    if (header.Key.ToLower() is "authorization")
+                    if (header.Key.ToLower() is "authorization" or "accept-encoding")
                         continue;
 
                     if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
@@ -687,7 +699,6 @@ namespace MatriX.API.Middlewares
                 catch { }
             }
 
-            requestMessage.Headers.ConnectionClose = false;
             requestMessage.Headers.Add("Authorization", Authorization());
             requestMessage.Headers.Host = context.Request.Host.Value;// uri.Authority;
             requestMessage.RequestUri = uri;
@@ -756,9 +767,7 @@ namespace MatriX.API.Middlewares
                     int bytesRead, tohours = 0;
                     var nexTimeUpdateStat = DateTime.Now.AddMilliseconds(100);
 
-                    Memory<byte> memoryBuffer = buffer.AsMemory();
-
-                    while ((bytesRead = await responseStream.ReadAsync(memoryBuffer, context.RequestAborted).ConfigureAwait(false)) != 0)
+                    while ((bytesRead = await responseStream.ReadAsync(buffer, context.RequestAborted).ConfigureAwait(false)) != 0)
                     {
                         info.lastActive = DateTime.Now;
 
@@ -777,7 +786,7 @@ namespace MatriX.API.Middlewares
                             tohours += bytesRead;
                         }
 
-                        await response.Body.WriteAsync(memoryBuffer.Slice(0, bytesRead), context.RequestAborted).ConfigureAwait(false);
+                        await response.Body.WriteAsync(buffer, 0, bytesRead, context.RequestAborted).ConfigureAwait(false);
                     }
                 }
                 finally

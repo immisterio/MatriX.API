@@ -154,7 +154,7 @@ namespace MatriX.API.Controllers
                 newinfo.Add(temp);
             }
 
-            return Content(JsonConvert.SerializeObject(newinfo, Formatting.Indented), "application/javascript; charset=utf-8");
+            return Content(JsonConvert.SerializeObject(newinfo, Formatting.Indented), "application/json; charset=utf-8");
         }
         #endregion
 
@@ -193,7 +193,7 @@ namespace MatriX.API.Controllers
                     readbytes = StatData.servers.Sum(i => i.stats.readbytes),
                     read = GetStringSizeInGB(StatData.servers.Sum(i => i.stats.readbytes))
 
-                }, Formatting.Indented), "application/javascript; charset=utf-8");
+                }, Formatting.Indented), "application/json; charset=utf-8");
             }
             else
             {
@@ -203,7 +203,7 @@ namespace MatriX.API.Controllers
                     streams = TorAPI.db.Sum(i => i.Value.filteredActiveStreams.Count),
                     readbytes = AppInit.ReadBytesToHour.Sum(i => (long)i.Value)
 
-                }, Formatting.Indented), "application/javascript; charset=utf-8");
+                }, Formatting.Indented), "application/json; charset=utf-8");
             }
         }
         #endregion
@@ -229,7 +229,7 @@ namespace MatriX.API.Controllers
             if (userData == null || !userData.admin)
                 return Content("not admin");
 
-            return Content(JsonConvert.SerializeObject(StatData.ReadBytesToHour, Formatting.Indented), "application/javascript; charset=utf-8");
+            return Content(JsonConvert.SerializeObject(StatData.ReadBytesToHour, Formatting.Indented), "application/json; charset=utf-8");
         }
         #endregion
 
@@ -241,7 +241,7 @@ namespace MatriX.API.Controllers
             if (userData == null || !userData.admin)
                 return Content("not admin");
 
-            return Content(JsonConvert.SerializeObject(StatData.ReadBytesToDay, Formatting.Indented), "application/javascript; charset=utf-8");
+            return Content(JsonConvert.SerializeObject(StatData.ReadBytesToDay, Formatting.Indented), "application/json; charset=utf-8");
         }
         #endregion
 
@@ -291,7 +291,7 @@ namespace MatriX.API.Controllers
                 }
             }
 
-            return Content(JsonConvert.SerializeObject(result, Formatting.Indented), "application/javascript; charset=utf-8");
+            return Content(JsonConvert.SerializeObject(result, Formatting.Indented), "application/json; charset=utf-8");
         }
         #endregion
     }

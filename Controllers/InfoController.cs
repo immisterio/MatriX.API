@@ -119,7 +119,7 @@ namespace MatriX.API.Controllers
                 u.shared,
                 u.whiteip,
                 u.expires
-            }, Formatting.Indented), "application/javascript; charset=utf-8");
+            }, Formatting.Indented), "application/json; charset=utf-8");
         }
 
         [Route("headers")]
