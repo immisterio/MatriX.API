@@ -83,6 +83,12 @@ namespace MatriX.API.Models
         /// </summary>
         public string server { get; set; }
 
+        /// <summary>
+        /// Указать вручную гео-положение пользователя 
+        /// UA,RU,BY,KZ
+        /// </summary>
+        public string geo { get; set; }
+
 
         [JsonIgnore]
         public string _ip { get; set; }

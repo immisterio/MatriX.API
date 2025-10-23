@@ -113,7 +113,7 @@ namespace MatriX.API.Controllers
 
             if (AppInit.settings.servers != null)
 			{
-				string geo = GeoIP2.Country(userData._ip);
+				string geo = userData.geo ?? GeoIP2.Country(userData._ip);
 
                 foreach (var server in AppInit.settings.servers)
                 {
@@ -175,7 +175,7 @@ namespace MatriX.API.Controllers
 
             if (AppInit.settings.servers != null)
             {
-                string geo = GeoIP2.Country(userData._ip);
+                string geo = userData.geo ?? GeoIP2.Country(userData._ip);
 
                 foreach (var server in AppInit.settings.servers)
                 {

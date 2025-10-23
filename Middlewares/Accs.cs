@@ -146,6 +146,7 @@ namespace MatriX.API.Middlewares
                                     group = _group;
 
                                 string xip = httpContext.Request.Headers["X-Client-IP"].ToString();
+                                string xgeo = httpContext.Request.Headers["X-Client-Geo"].ToString();
 
                                 httpContext.Features.Set(new UserData()
                                 {
@@ -153,6 +154,7 @@ namespace MatriX.API.Middlewares
                                     login = login,
                                     passwd = passwd,
                                     _ip = xip,
+                                    geo = xgeo,
                                     versionts = httpContext.Request.Headers["X-Versionts"].ToString(),
                                     maxSize = maxSize,
                                     maxiptoIsLockHostOrUser = maxiptoIsLockHostOrUser,

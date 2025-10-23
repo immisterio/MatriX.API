@@ -95,7 +95,7 @@ namespace MatriX.API.Controllers
                 u.id,
                 readBytes,
                 readBytes_slave = slavedata != null ? slavedata.Value<ulong>("readBytes") : 0,
-                geo = GeoIP2.Country(u._ip),
+                geo = u.geo ?? GeoIP2.Country(u._ip),
                 ip = u._ip,
                 ips,
                 ips_stream,

@@ -353,6 +353,7 @@ namespace MatriX.API.Middlewares
             requestMessage.Headers.Add("X-group", userData.group.ToString());
             requestMessage.Headers.Add("X-shared", userData.shared.ToString());
             requestMessage.Headers.Add("X-Client-IP", userData._ip);
+            requestMessage.Headers.Add("X-Client-Geo", userData.geo);
             requestMessage.Headers.Add("X-Versionts", userData.versionts ?? "latest");
             requestMessage.Headers.Add("X-maxSize", Math.Max(AppInit.groupSettings(userData.group).maxSize, userData.maxSize).ToString());
             requestMessage.Headers.Add("X-maxiptoIsLockHostOrUser", Math.Max(AppInit.groupSettings(userData.group).maxiptoIsLockHostOrUser, userData.maxiptoIsLockHostOrUser).ToString());
@@ -374,7 +375,7 @@ namespace MatriX.API.Middlewares
         #region СurrentServer
         public static string СurrentServer(UserData userData, IMemoryCache memory, bool isStream)
         {
-            string geo = GeoIP2.Country(userData._ip);
+            string geo = userData.geo ?? GeoIP2.Country(userData._ip);
             string serip = serv(userData, geo, memory, isStream);
             if (serip.Contains("127.0.0.1"))
             {
