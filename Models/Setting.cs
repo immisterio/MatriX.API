@@ -7,6 +7,8 @@ namespace MatriX.API.Models
     {
         public bool log { get; set; }
 
+        public string logfullToIP { get; set; }
+
         /// <summary>
         /// Формат логирования запросов
         /// </summary>

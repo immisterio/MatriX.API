@@ -263,54 +263,56 @@ namespace MatriX.API.Middlewares
                 }
             }
 
-            using (var client = httpClientFactory.CreateClient("base"))
+            var client = httpClientFactory.CreateClient("base");
+            var request = CreateProxyHttpRequest(httpContext, new Uri($"{serip}{clearUri}"), userData, serip);
+
+            using (var response = await client.SendAsync(request, httpContext.RequestAborted).ConfigureAwait(false))
             {
-                var request = CreateProxyHttpRequest(httpContext, new Uri($"{serip}{clearUri}"), userData, serip);
+                string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                using (var response = await client.SendAsync(request, httpContext.RequestAborted).ConfigureAwait(false))
+                #region UpdateHeaders
+                void UpdateHeaders(HttpHeaders headers)
                 {
-                    string result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-                    #region UpdateHeaders
-                    void UpdateHeaders(HttpHeaders headers)
+                    foreach (var header in headers)
                     {
-                        foreach (var header in headers)
+                        try
                         {
-                            try
-                            {
-                                if (header.Key.ToLower() is "www-authenticate" or "transfer-encoding" or "etag" or "connection" or "content-disposition" or "content-encoding")
-                                    continue;
 
-                                if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
-                                    continue;
+                            if (header.Key.ToLower()
+                                is "www-authenticate" or "etag" or "connection" 
+                                or "content-disposition" or "content-length"
+                                or "vary" or "transfer-encoding" or "content-encoding")
+                                continue;
 
-                                httpContext.Response.Headers.TryAdd(header.Key, header.Value.ToArray());
-                            }
-                            catch { }
+                            if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
+                                continue;
+
+                            httpContext.Response.Headers.TryAdd(header.Key, header.Value.ToArray());
                         }
+                        catch { }
                     }
-                    #endregion
-
-                    UpdateHeaders(response.Headers);
-                    UpdateHeaders(response.Content.Headers);
-
-                    #region playlist
-                    if (httpContext.Request.Path.Value == "/playlistall/all.m3u")
-                    {
-                        result = Regex.Replace(result, "https?://[^/]+", $"{httpContext.Request.Scheme}://{httpContext.Request.Host.Value}");
-                    }
-                    else if (httpContext.Request.Path.Value.StartsWith("/stream/") && httpContext.Request.QueryString.Value.Contains("&m3u"))
-                    {
-                        if (response.Content?.Headers?.ContentType?.MediaType == "audio/x-mpegurl" && remoteStream_server != null)
-                            result = Regex.Replace(result, "https?://[^/]+", remoteStream_server);
-                    }
-                    #endregion
-
-                    httpContext.Response.ContentLength = result.Length;
-                    httpContext.Response.StatusCode = (int)response.StatusCode;
-
-                    await httpContext.Response.WriteAsync(result, httpContext.RequestAborted).ConfigureAwait(false);
                 }
+                #endregion
+
+                UpdateHeaders(response.Headers);
+                UpdateHeaders(response.Content.Headers);
+
+                #region playlist
+                if (httpContext.Request.Path.Value == "/playlistall/all.m3u")
+                {
+                    result = Regex.Replace(result, "https?://[^/]+", $"{httpContext.Request.Scheme}://{httpContext.Request.Host.Value}");
+                }
+                else if (httpContext.Request.Path.Value.StartsWith("/stream/") && httpContext.Request.QueryString.Value.Contains("&m3u"))
+                {
+                    if (response.Content?.Headers?.ContentType?.MediaType == "audio/x-mpegurl" && remoteStream_server != null)
+                        result = Regex.Replace(result, "https?://[^/]+", remoteStream_server);
+                }
+                #endregion
+
+                //httpContext.Response.ContentLength = result.Length;
+                httpContext.Response.StatusCode = (int)response.StatusCode;
+
+                await httpContext.Response.WriteAsync(result, httpContext.RequestAborted).ConfigureAwait(false);
             }
         }
 

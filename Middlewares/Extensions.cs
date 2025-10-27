@@ -6,7 +6,7 @@ namespace MatriX.API.Middlewares
     {
         public static IApplicationBuilder UseRequestLogging(this IApplicationBuilder builder)
         {
-            return builder.UseMiddleware<RequestLoggingMiddleware>();
+            return builder.UseMiddleware<RequestLogging>();
         }
 
         public static IApplicationBuilder UseModHeaders(this IApplicationBuilder builder)

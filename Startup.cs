@@ -55,7 +55,7 @@ namespace MatriX.API
 
             services.Configure<GzipCompressionProviderOptions>(o =>
             {
-                o.Level = CompressionLevel.SmallestSize;
+                o.Level = CompressionLevel.Optimal;
             });
         }
 

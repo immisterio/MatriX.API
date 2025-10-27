@@ -713,7 +713,7 @@ namespace MatriX.API.Middlewares
         {
             var response = context.Response;
             response.StatusCode = (int)responseMessage.StatusCode;
-            response.ContentLength = responseMessage.Content.Headers.ContentLength;
+            //response.ContentLength = responseMessage.Content.Headers.ContentLength;
 
             #region UpdateHeaders
             void UpdateHeaders(HttpHeaders headers)
@@ -722,7 +722,10 @@ namespace MatriX.API.Middlewares
                 {
                     try
                     {
-                        if (header.Key.ToLower() is "www-authenticate" or "transfer-encoding" or "etag" or "connection" or "content-disposition")
+                        if (header.Key.ToLower()
+                                is "www-authenticate" or "etag" or "connection"
+                                or "content-disposition" or "content-length"
+                                or "vary" or "transfer-encoding" or "content-encoding")
                             continue;
 
                         if (Regex.IsMatch(header.Key, @"[^\x00-\x7F]") || Regex.IsMatch(header.Value.ToString(), @"[^\x00-\x7F]"))
