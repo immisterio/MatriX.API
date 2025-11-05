@@ -151,7 +151,7 @@ namespace MatriX.API.Middlewares
                 return OnError(httpContext, $"IP {clientIP} отсутствует в списке разрешенных");
             }
 
-            if (AppInit.settings.onlyRemoteApi == false && httpContext.Request.Path.Value.StartsWith("/stream/"))
+            if (AppInit.settings.onlyRemoteApi == false && httpContext.Request.Path.Value.StartsWith("/stream"))
             {
                 if (TorAPI.db.TryGetValue(userData.id, out TorInfo tinfo))
                 {
@@ -169,7 +169,7 @@ namespace MatriX.API.Middlewares
                                 return httpContext.Response.WriteAsync("{\"stat\":3,\"stat_string\": \"Torrent working\"}", httpContext.RequestAborted);
                             }
 
-                            if (Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|m3u)(&|$)"))
+                            if (Regex.IsMatch(httpContext.Request.QueryString.Value, "(&|\\?)(preload|m3u)(=true)?(&|$)", RegexOptions.IgnoreCase))
                                 return httpContext.Response.WriteAsync(string.Empty, httpContext.RequestAborted);
 
                             httpContext.Response.Redirect(AppInit.settings.rateLimiter.urlVideoError);

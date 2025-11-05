@@ -473,7 +473,8 @@ namespace MatriX.API.Middlewares
                 var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, httpContext.RequestAborted).ConfigureAwait(false);
 
                 // ошибка MaxSize - https://github.com/YouROK/TorrServer/blob/c52e1a0dadefbea535fd7391332cf26f1c704995/server/torr/stream.go#L52 
-                if (httpContext.Request.Path.Value.StartsWith("/stream/") && response.Content.Headers.ContentLength == 0 && !Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|stat|m3u)(&|$)"))
+                if (httpContext.Request.Path.Value.StartsWith("/stream") && response.Content.Headers.ContentLength == 0 
+                    && !Regex.IsMatch(httpContext.Request.QueryString.Value, "(&|\\?)(preload|stat|m3u)(=true)?(&|$)", RegexOptions.IgnoreCase))
                 {
                     httpContext.Response.Redirect(AppInit.settings.maxSize_urlVideoError);
                     return;
@@ -723,8 +724,7 @@ namespace MatriX.API.Middlewares
                     try
                     {
                         if (header.Key.ToLower()
-                                is "www-authenticate" or "etag" or "connection"
-                                or "content-disposition" or "content-length"
+                                is "www-authenticate" or "etag" or "connection" or "content-disposition"
                                 or "vary" or "transfer-encoding" or "content-encoding")
                             continue;
 

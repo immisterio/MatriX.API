@@ -237,7 +237,7 @@ namespace MatriX.API.Middlewares
 
             if (isStream)
             {
-                if (httpContext.Request.Path.Value.StartsWith("/stream/") && Regex.IsMatch(httpContext.Request.QueryString.Value, "&(preload|stat|m3u)(&|$)", RegexOptions.IgnoreCase)) { }
+                if (httpContext.Request.Path.Value.StartsWith("/stream") && Regex.IsMatch(httpContext.Request.QueryString.Value, "(&|\\?)(preload|stat|m3u)(=true)?(&|$)", RegexOptions.IgnoreCase)) { }
                 else if (httpContext.Request.Path.Value == "/playlistall/all.m3u") { }
                 else
                 {
@@ -302,7 +302,7 @@ namespace MatriX.API.Middlewares
                 {
                     result = Regex.Replace(result, "https?://[^/]+", $"{httpContext.Request.Scheme}://{httpContext.Request.Host.Value}");
                 }
-                else if (httpContext.Request.Path.Value.StartsWith("/stream/") && httpContext.Request.QueryString.Value.Contains("&m3u"))
+                else if (httpContext.Request.Path.Value.StartsWith("/stream") && Regex.IsMatch(httpContext.Request.QueryString.Value, "(&|\\?)m3u(=true)?(&|$)", RegexOptions.IgnoreCase))
                 {
                     if (response.Content?.Headers?.ContentType?.MediaType == "audio/x-mpegurl" && remoteStream_server != null)
                         result = Regex.Replace(result, "https?://[^/]+", remoteStream_server);
