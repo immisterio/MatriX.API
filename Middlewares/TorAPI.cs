@@ -431,6 +431,13 @@ namespace MatriX.API.Middlewares
                     await client.PostAsync($"http://127.0.0.1:{info.port}/settings", new StringContent(settingsJson, Encoding.UTF8, "application/json"), httpContext.RequestAborted).ConfigureAwait(false);
 
                     await httpContext.Response.WriteAsync(string.Empty, httpContext.RequestAborted).ConfigureAwait(false);
+
+                    {
+                        info.Dispose();
+                        db.TryRemove(info.user.id, out _);
+                        logAction(info.user.id, "stop - change settings");
+                    }
+
                     return;
                     #endregion
                 }
@@ -759,8 +766,7 @@ namespace MatriX.API.Middlewares
                     throw new NotSupportedException("NotSupported_UnwritableStream");
 
 
-                int rent = responseMessage.Content.Headers.ContentLength > 100000000 ? 81920 : 4096;
-                byte[] buffer = ArrayPool<byte>.Shared.Rent(rent);
+                byte[] buffer = ArrayPool<byte>.Shared.Rent(4096);
 
                 string tlink = Regex.Match(context.Request.QueryString.Value, @"link=([0-9a-z]+)", RegexOptions.IgnoreCase).Groups[1].Value;
                 string tindex = Regex.Match(context.Request.QueryString.Value, @"index=([0-9]+)", RegexOptions.IgnoreCase).Groups[1].Value;
@@ -774,20 +780,24 @@ namespace MatriX.API.Middlewares
                     {
                         info.lastActive = DateTime.Now;
 
-                        if (DateTime.Now > nexTimeUpdateStat)
+                        try
                         {
-                            nexTimeUpdateStat = DateTime.Now.AddMilliseconds(100);
+                            if (DateTime.Now > nexTimeUpdateStat)
+                            {
+                                nexTimeUpdateStat = DateTime.Now.AddMilliseconds(100);
 
-                            if (!string.IsNullOrEmpty(tlink))
-                                info.activeStreams[$"{tlink}_{tindex}"] = DateTime.Now;
+                                if (!string.IsNullOrEmpty(tlink))
+                                    info.activeStreams[$"{tlink}_{tindex}"] = DateTime.Now;
 
-                            AppInit.ReadBytesToHour.AddOrUpdate(info.user.id, (ulong)tohours, (k, v) => v + (ulong)tohours);
-                            tohours = 0;
+                                AppInit.ReadBytesToHour.AddOrUpdate(info.user.id, (ulong)tohours, (k, v) => v + (ulong)tohours);
+                                tohours = 0;
+                            }
+                            else
+                            {
+                                tohours += bytesRead;
+                            }
                         }
-                        else
-                        {
-                            tohours += bytesRead;
-                        }
+                        catch { }
 
                         await response.Body.WriteAsync(buffer, 0, bytesRead, context.RequestAborted).ConfigureAwait(false);
                     }

@@ -98,10 +98,10 @@ namespace MatriX.API.Controllers
 
 			foreach (string infile in Directory.GetFiles("TorrServer").OrderByDescending(i => i.EndsWith("latest"))) 
 			{
-				if (infile.Contains("."))
-					continue;
+                if (infile.Contains(".json"))
+                    continue;
 
-				string name = Path.GetFileName(infile);
+                string name = Path.GetFileName(infile);
 				string _checked = ((string.IsNullOrEmpty(userData.versionts) && name == "latest") || name == userData.versionts) ? "checked" : "";
 
                 html_ts += $"<div class=\"flex\"><input type=\"radio\" name=\"ts\" value=\"{name}\" {_checked} /> {name}</div>";
@@ -171,7 +171,7 @@ namespace MatriX.API.Controllers
             if (userData == null)
                 return Json(new { error = "not user" });
 
-            var serers = new List<UserServer>();
+            var servers = new List<UserServer>();
 
             if (AppInit.settings.servers != null)
             {
@@ -210,12 +210,44 @@ namespace MatriX.API.Controllers
 
                         var load = StatData.servers?.FirstOrDefault(i => i.host == server.host)?.load;
 
-                        serers.Add(new UserServer(server.name, status, server.host, @checked, load));
+                        servers.Add(new UserServer(server.name, status, server.host, @checked, load));
                     }
                 }
             }
 
-            return Content(JsonConvert.SerializeObject(serers), "application/json; charset=utf-8");
+            return Content(JsonConvert.SerializeObject(servers), "application/json; charset=utf-8");
+        }
+        #endregion
+
+        #region TS Versions
+        [Route("control/tsversions")]
+        public ActionResult Tsversions()
+        {
+            if (!AppInit.settings.AuthorizationRequired)
+                return Json(new { error = "AuthorizationRequired" });
+
+            var userData = HttpContext.Features.Get<UserData>();
+            if (userData == null)
+                return Json(new { error = "not user" });
+
+            var servers = new List<TSversion>();
+
+            foreach (string infile in Directory.GetFiles("TorrServer").OrderByDescending(i => i.EndsWith("latest")))
+            {
+                if (infile.Contains(".json"))
+                    continue;
+
+                string name = Path.GetFileName(infile);
+                string _checked = ((string.IsNullOrEmpty(userData.versionts) && name == "latest") || name == userData.versionts) ? "checked" : "";
+
+                servers.Add(new TSversion() 
+                {
+                    version = name,
+                    @checked = _checked == "checked"
+                });
+            }
+
+            return Content(JsonConvert.SerializeObject(servers), "application/json; charset=utf-8");
         }
         #endregion
 
