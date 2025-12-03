@@ -21,12 +21,12 @@ namespace MatriX.API
 
         public static ConcurrentBag<IPNetwork> whiteip = new ConcurrentBag<IPNetwork>();
 
-        public static ConcurrentDictionary<string, string> sharedUserToServer = new ConcurrentDictionary<string, string>();
+        public static ConcurrentDictionary<string, UserData> sharedUserToServer = new ConcurrentDictionary<string, UserData>();
 
         static AppInit()
         {
             if (File.Exists($"{appfolder}/sharedUserToServer.json"))
-                sharedUserToServer = JsonConvert.DeserializeObject<ConcurrentDictionary<string, string>>(File.ReadAllText($"{appfolder}/sharedUserToServer.json"));
+                sharedUserToServer = JsonConvert.DeserializeObject<ConcurrentDictionary<string, UserData>>(File.ReadAllText($"{appfolder}/sharedUserToServer.json"));
 
             #region updateSettings
             void updateSettings()

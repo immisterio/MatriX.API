@@ -281,36 +281,40 @@ namespace MatriX.API.Controllers
 			{
 				if (userData.shared)
 				{
-					AppInit.sharedUserToServer.AddOrUpdate(userData.id, userData.server, (key, oldValue) => userData.server);
-                    System.IO.File.WriteAllText($"{AppInit.appfolder}/sharedUserToServer.json", JsonConvert.SerializeObject(AppInit.sharedUserToServer, Formatting.Indented));
+					AppInit.sharedUserToServer.AddOrUpdate(userData.id, userData, (key, oldValue) => userData);
+                    System.IO.File.WriteAllText($"{AppInit.appfolder}/sharedUserToServer.json", JsonConvert.SerializeObject(AppInit.sharedUserToServer, Formatting.Indented, new JsonSerializerSettings
+                    {
+                        NullValueHandling = NullValueHandling.Ignore,
+                        DefaultValueHandling = DefaultValueHandling.Ignore
+                    }));
                 }
 				else
 				{
 					System.IO.File.WriteAllText($"{AppInit.appfolder}/usersDb.json", JsonConvert.SerializeObject(AppInit.usersDb, Formatting.Indented));
-
-					if (reload && TorAPI.db.TryGetValue(userData.id, out TorInfo info))
-					{
-						info?.Dispose();
-						TorAPI.db.TryRemove(userData.id, out _);
-					}
-
-					if (reload && !string.IsNullOrEmpty(userData.server))
-					{
-						string serv = RemoteAPI.СurrentServer(userData, memoryCache, false);
-
-                        if (serv != null && !serv.Contains("127.0.0.1"))
-                        {
-                            using (var client = new HttpClient())
-                            {
-                                var request = RemoteAPI.CreateProxyHttpRequest(null, new Uri($"{userData.server}/shutdown"), userData, userData.server);
-                                var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-                            }
-                        }
-					}
 				}
-			}
+            }
 
-			if (jsonresult)
+            if (reload && TorAPI.db.TryGetValue(userData.id, out TorInfo info))
+            {
+                info?.Dispose();
+                TorAPI.db.TryRemove(userData.id, out _);
+            }
+
+            if (reload && !string.IsNullOrEmpty(userData.server))
+            {
+                string serv = RemoteAPI.СurrentServer(userData, memoryCache, false);
+
+                if (serv != null && !serv.Contains("127.0.0.1"))
+                {
+                    using (var client = new HttpClient())
+                    {
+                        var request = RemoteAPI.CreateProxyHttpRequest(null, new Uri($"{userData.server}/shutdown"), userData, userData.server);
+                        var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                    }
+                }
+            }
+
+            if (jsonresult)
 				return Json(new { success = true });
 
             string html = @"
