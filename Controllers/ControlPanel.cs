@@ -300,7 +300,7 @@ namespace MatriX.API.Controllers
                 TorAPI.db.TryRemove(userData.id, out _);
             }
 
-            if (reload && !string.IsNullOrEmpty(userData.server))
+            if (reload)
             {
                 string serv = RemoteAPI.СurrentServer(userData, memoryCache, false);
 
@@ -308,8 +308,8 @@ namespace MatriX.API.Controllers
                 {
                     using (var client = new HttpClient())
                     {
-                        var request = RemoteAPI.CreateProxyHttpRequest(null, new Uri($"{userData.server}/shutdown"), userData, userData.server);
-                        var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                        var request = RemoteAPI.CreateProxyHttpRequest(null, new Uri($"{serv}/shutdown"), userData, serv);
+                        await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
                     }
                 }
             }
