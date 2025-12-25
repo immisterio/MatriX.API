@@ -402,7 +402,7 @@ namespace MatriX.API.Middlewares
 
                     #region Актуальные настройки
                     var response = await client.PostAsync($"http://127.0.0.1:{info.port}/settings", new StringContent("{\"action\":\"get\"}", Encoding.UTF8, "application/json"), httpContext.RequestAborted).ConfigureAwait(false);
-                    string settingsJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    string settingsJson = await response.Content.ReadAsStringAsync(httpContext.RequestAborted).ConfigureAwait(false);
 
                     if (requestJson.Trim() == "{\"action\":\"get\"}")
                     {
@@ -440,6 +440,30 @@ namespace MatriX.API.Middlewares
 
                     return;
                     #endregion
+                }
+            }
+            #endregion
+
+            #region storage/settings
+            if (httpContext.Request.Path.Value.StartsWith("/storage/settings"))
+            {
+                if (httpContext.Request.Method == "POST")
+                {
+                    await httpContext.Response.WriteAsJsonAsync(new { status = "ok"}, httpContext.RequestAborted).ConfigureAwait(false);
+                    return;
+                }
+
+                using (var client = httpClientFactory.CreateClient("ts"))
+                {
+                    client.Timeout = TimeSpan.FromSeconds(5);
+                    client.DefaultRequestHeaders.Add("Authorization", Authorization());
+
+                    var response = await client.GetAsync($"http://127.0.0.1:{info.port}/storage/settings", httpContext.RequestAborted).ConfigureAwait(false);
+                    string settingsJson = await response.Content.ReadAsStringAsync(httpContext.RequestAborted).ConfigureAwait(false);
+
+                    httpContext.Response.ContentType = "application/json; charset=utf-8";
+                    await httpContext.Response.WriteAsync(settingsJson, httpContext.RequestAborted).ConfigureAwait(false);
+                    return;
                 }
             }
             #endregion
